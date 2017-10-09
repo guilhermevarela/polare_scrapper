@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-	Date: Oct 16th, 2017
+	Date: Oct 06th, 2017
 
 	Author: Guilherme Varela
 
@@ -29,14 +29,24 @@ class TseSiglasSpider(scrapy.Spider):
 		
 
 		tds = trs.xpath('.//td')
-		sigla= [] 
+		siglas= [] 
+		links= [] 
 		for i, td in enumerate(tds):			
 			n = i % len(headers)
 			if i>0 and n == 0:
-				yield {k:v for k,v in zip(headers, sigla)}				
-				sigla= [] 
+				yield { 
+					'texts': {k:v for k,v in zip(headers, siglas)},
+					'links': {k:v for k,v in zip(headers, links) if v},
+				}								
+				siglas= [] 
+				links= [] 
 			
 			value = td.xpath('.//text()').extract_first()
-			sigla.append(value)			
-		yield {k:v for k,v in zip(headers, sigla)}				
+			link=   td.xpath('.//a/@href').extract_first()
+			siglas.append(value)			
+			links.append(link)			
+		yield { 
+		'texts': {k:v for k,v in zip(headers, siglas)},
+		'links': {k:v for k,v in zip(headers, links) if v},
+		}								
 
