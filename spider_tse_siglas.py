@@ -5,7 +5,7 @@
 	Author: Guilherme Varela
 
 	Scrapy shell: scrapy shell 'http://www.tse.jus.br/partidos/partidos-politicos/registrados-no-tse'
-
+	scrapy shell 'http://www.tse.jus.br/partidos/partidos-politicos/partido-do-movimento-democratico-brasileiro'
 	Scrapy running: scrapy runspider spider_tse_siglas.py
 
 	Scrapy run + store: scrapy runspider  spider_tse_siglas.py -o siglas.json
