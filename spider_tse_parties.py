@@ -13,7 +13,6 @@
 	Scrapy run + store: scrapy runspider  spider_tse_parties.py -o tse_parties.json
 '''
 import scrapy
-# import string
 
 def tokenizer(arr0, f2v={}):
 	'''
