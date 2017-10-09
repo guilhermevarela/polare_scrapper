@@ -17,7 +17,6 @@ class TseSiglasSpider(scrapy.Spider):
 	start_urls = ['http://www.tse.jus.br/partidos/partidos-politicos/registrados-no-tse']
 	
 	def parse(self, response): 
-		first= True
 		trs = response.xpath('//tbody/tr')
 		ths = trs.xpath('./th')
 		headers = [] 
