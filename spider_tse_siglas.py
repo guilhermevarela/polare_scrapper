@@ -6,7 +6,7 @@
 
 	Scrapy shell: scrapy shell 'http://www.tse.jus.br/partidos/partidos-politicos/registrados-no-tse'
 	scrapy shell 'http://www.tse.jus.br/partidos/partidos-politicos/partido-do-movimento-democratico-brasileiro'
-	Scrapy running: scrapy runspider spider_tse_siglas.py
+	Scrapy running: scrapy runspider spider_tse_siglas.py 
 
 	Scrapy run + store: scrapy runspider  spider_tse_siglas.py -o siglas.json
 '''
@@ -34,8 +34,8 @@ class TseSiglasSpider(scrapy.Spider):
 			n = i % len(headers)
 			if i>0 and n == 0:
 				yield { 
-					'texts': {k:v for k,v in zip(headers, siglas)},
-					'links': {k:v for k,v in zip(headers, links) if v},
+					'texts': {k:v.encode('utf-8') for k,v in zip(headers, siglas)},
+					'links': {k:v.encode('utf-8') for k,v in zip(headers, links) if v},
 				}								
 				siglas= [] 
 				links= [] 

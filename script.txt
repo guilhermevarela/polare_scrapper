@@ -1,0 +1,6 @@
+scrapy runspider spider_voteevents.py -a legal_act='PEC171/93' -a act_id=14493 -o voteevents_PEC17193.json
+scrapy runspider spider_voteevents.py -a legal_act='PEC395/14' -a act_id=611966 -o voteevents_PEC39514.json
+scrapy runspider spider_voteevents.py -a legal_act='PEC241/16' -a act_id=2088351 -o voteevents_PL24116.json
+scrapy runspider spider_voteevents.py -a legal_act='PL4.302/98' -a act_id=20794 -o voteevents_PL430298.json
+scrapy runspider spider_voteevents.py -a legal_act='PL6.787/16' -a act_id=2122076 -o voteevents_PL678716.json
+scrapy runspider spider_voteevents.py -a legal_act='MPV756/16' -a act_id=2121839 -o voteevents_MPV75616.json
