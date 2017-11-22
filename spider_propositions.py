@@ -21,6 +21,11 @@ URL_OPEN_DATA_CAMARA_API_V2= 'https://dadosabertos.camara.leg.br/api/v2/'
 class VoteEventsSpider(scrapy.Spider):
 	name= 'propositions'
 
+	# Overwrites default: ASCII
+	custom_settings={
+		'FEED_EXPORT_ENCODING': 'utf-8' 
+	}
+
 	def __init__(self, tipo, numero, ano, *args,**kwargs):
 		super(scrapy.Spider).__init__(*args,**kwargs)		
 		
@@ -54,14 +59,14 @@ class VoteEventsSpider(scrapy.Spider):
 		url += "&dataFim=" + get_today_string()
 
 		req = scrapy.Request(url, 
-			self.parse_proposition, 
+			self.parse_propositions, 
 			headers= {'accept': 'application/json'}
 		)
 		yield req	
 
-	def parse_proposition(self, response):	
+	def parse_propositions(self, response):	
 		'''
-			Returns proposition data
+			Returns all propositions by code
 
 			INPUT 
 				response: scrapy.Response object (proposition data)
@@ -74,12 +79,40 @@ class VoteEventsSpider(scrapy.Spider):
 		'''
 		jsonfied =json.loads(response.body_as_unicode())
 		# import code; code.interact(local=dict(globals(), **locals()))		
+
 		if isinstance(jsonfied['dados'], list):
 			self.proposition= jsonfied['dados'][0]
 		else:
 			self.proposition= jsonfied['dados']
 				
-		yield self.proposition		
+
+		self.proposition_id = self.proposition['id']
+		url  = URL_OPEN_DATA_CAMARA_API_V2
+		url += 'proposicoes/' + str(self.proposition_id)
+		
+		req = scrapy.Request(url, 
+			self.parse_proposition_id, 
+			headers= {'accept': 'application/json'}
+		)
+		yield req		
+
+	def parse_proposition_id(self, response):
+		'''
+			Returns a proposition details
+
+			INPUT 
+				response: scrapy.Response object (proposition data)
+		
+			OUTPUT 
+				request: scrapy.Request object
+							request url example: 
+							https://dadosabertos.camara.leg.br/api/v2/proposicoes/14493/votacoes'
+
+		'''
+		jsonfied =json.loads(response.body_as_unicode())
+
+		yield jsonfied['dados']		
+
 
 def get_today_string(): 
 	todaystr = str(datetime.today()).split(' ')[0] 
