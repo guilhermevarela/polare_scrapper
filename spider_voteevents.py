@@ -197,6 +197,7 @@ class VoteEventsSpider(scrapy.Spider):
 		result=  {k:v for k,v in response.meta.items() if k in ['voteevent_id', 'voteevent_subject']}
 		
 		for vote in self.vote: 
+			result['voteevent_code'] 	= self.filename
 			result['vote_value'] 		  = vote['voto']
 			result['vote_deputy_name']= vote['parlamentar']['nome']
 			result['vote_deputy_id']  = vote['parlamentar']['id']									
