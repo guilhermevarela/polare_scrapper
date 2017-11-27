@@ -10,7 +10,7 @@
 
 	Scrapy running: scrapy runspider spider_tse_parties.py
 
-	Scrapy run + store: scrapy runspider  spider_tse_parties.py -o tse_parties.json
+	Scrapy run + store: scrapy runspider spider_tse_parties.py -o tse_parties.json
 '''
 import scrapy
 
@@ -55,7 +55,7 @@ class TsePartiesSpider(scrapy.Spider):
 		first= True
 		info= {} 
 		info['title']=  response.xpath('.//div[@id="tituloInterno"]/h2/text()').extract_first()
-		
+		import code; code.interact(local=dict(globals(), **locals()))	
 		contents= response.xpath('.//div[@id="textoConteudo"]//p') # prevents <strong></strong> tag --> len 2 array 
 		# variations for contents[i].xpath('.//text()').extract()
 		# ['Nome: Partido do Movimento Democrático Brasileiro']
