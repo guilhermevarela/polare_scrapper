@@ -28,22 +28,30 @@ class TsePoliticalPartiesSpider(scrapy.Spider):
 		'FEED_EXPORT_ENCODING': 'utf-8' 
 	}
 
-	keys=['party_code', 'party_name', 'party_founding_date', 'party_president', 'party_founding_number']
+	column_fields={1: 'party_code', 
+	2:'party_name', 
+	3:'party_founding_date', 	
+	5:'party_id'}
 	def parse(self, response): 
 		# tds = response.xpath('//tbody/tr//td[@class="tabelas"]')
 		tds = response.xpath('//tbody/tr//td')
+		ncols=6
 		parties= {} 
-		count=0
 
 		for i, td in enumerate(tds):			
-			if not(count==3): 
+			row = int(i / ncols)
+			col = i - row*ncols
+			
+			if col in self.column_fields: 
 				values=  td.xpath('.//text()').extract()
 
-				# print('%d:%s' % (i, value))
+				# Due to weird formatting we must grab the first non-empty value
 				values=list(filter(lambda x : not(x in stopwords), values))
-				parties[self.keys[count]]= values[0] if len(values)>0 else None			
-				if (count == 4):
-					yield parties
-					parties={}
-					count=-1
-			count+=1 
+				field_name=self.column_fields[col]
+				parties[field_name]= values[0] if len(values)>0 else None			
+			
+			if (col == ncols-1):
+				yield parties
+				parties={}
+
+
