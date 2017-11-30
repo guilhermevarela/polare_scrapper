@@ -1,5 +1,2 @@
-myspider.py
 __pycache__
-/demos/*.json
-/demos/*.html
 .DS_Store
