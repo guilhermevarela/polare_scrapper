@@ -38,8 +38,9 @@ class PoliticalPartyMembershipSpider(scrapy.Spider):
 
 	congressman_mapping={
 		'dataNascimento': 'birth_date',
-		'partidoAtual': 'party_code',
-
+		'idPartidoAnterior':  'previous_party_id',
+		'idPartidoPosterior': 'posterior_party_id',
+		'dataFiliacaoPartidoPosterior':  'posterior_party_affiliation_date',		
 	}
 	def start_requests(self): 
 		'''
@@ -110,12 +111,29 @@ class PoliticalPartyMembershipSpider(scrapy.Spider):
 			for item in congressman_details:
 				if item.tag in self.congressman_mapping:
 					key=self.congressman_mapping[item.tag]
-					congressman[key]=formatter(item.text)
+					congressman[key]=formatter(item.text) 
 
-				stop= (target_fields == set(congressman.keys()))
-				if stop:
-					info.update(congressman) 
-					yield info
+				if item.tag == 'filiacoesPartidarias':					
+
+					for subitem in item: #filiacaoPartidaria
+						# import code; code.interact(local=dict(globals(), **locals()))			
+						tags=[]
+						for subsubitem in subitem:
+							if subsubitem.tag in self.congressman_mapping:
+								key=self.congressman_mapping[subsubitem.tag]
+								tags.append(key)
+								congressman[key]=formatter(subsubitem.text) 						
+							
+							stop= (target_fields == set(congressman.keys()))
+							if stop:								
+								result=info.copy()
+								result.update(congressman) 
+								yield result
+								for tag in tags:
+									del congressman[tag]
+								tags=[]	
+
+
 
 def formatter(rawtext):
 	'''
