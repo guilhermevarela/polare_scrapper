@@ -31,10 +31,14 @@ class PoliticalPartyMembershipSpider(scrapy.Spider):
 	name= 'political_party_membership'
 
 
+	# Overwrites default: ASCII
+	custom_settings={
+		'FEED_EXPORT_ENCODING': 'utf-8' 
+	}
+
 	congressman_mapping={
 		'dataNascimento': 'birth_date',
 		'partidoAtual': 'party_code',
-
 
 	}
 	def start_requests(self): 
