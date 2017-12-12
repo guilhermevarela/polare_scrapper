@@ -15,9 +15,9 @@
 	Scrapy shell: 
 		1. scrapy shell 'http://www.camara.leg.br/SitCamaraWS/Deputados.asmx/ObterDeputados'
 
-	Scrapy running: scrapy runspider spider_congressmen_and_party_membership.py
+	Scrapy running: scrapy runspider spider_congressmen_and_party_memberships.py
 
-	Scrapy run + store: scrapy runspider  spider_congressmen_and_party_membership.py -o congressman_and_party_membership.json
+	Scrapy run + store: scrapy runspider spider_congressmen_and_party_memberships.py -o congressman_and_party_membership.json
 '''
 from datetime import datetime
 from datetime import date 
@@ -25,12 +25,17 @@ import scrapy
 import re
 import xml.etree.ElementTree as ET 
 
+#import because of files
+import pandas as pd 
+import numpy as np 
+
+POLARE_PREFIX='http://www.seliganapolitica.org/resource/'
 URL_OPEN_DATA_CAMARA_API_V1= 'http://www.camara.leg.br/SitCamaraWS/Deputados.asmx/'
 
 
 
-class PoliticalPartyMembershipSpider(scrapy.Spider):
-	name= 'political_party_membership'
+class CongressmenAndPartyMembershipsSpider(scrapy.Spider):
+	name= 'congressmen_and_paty_memberships'
 
 
 	# Overwrites default: ASCII
@@ -49,6 +54,8 @@ class PoliticalPartyMembershipSpider(scrapy.Spider):
 	}
 	def __init__(self, *args,**kwargs):
 		super(scrapy.Spider).__init__(*args,**kwargs)				
+		# import code; code.interact(local=dict(globals(), **locals()))		
+		self.df_congressmen = pd.read_csv('resource_uris/person_resource_uri.csv', sep=' ', index_col=0)		
 		self.congressmen={} # use registration id as key
 	
 
@@ -101,7 +108,8 @@ class PoliticalPartyMembershipSpider(scrapy.Spider):
 		root = ET.fromstring(response.body_as_unicode()) 
 
 		registration_id=response.meta['registration_id']
-		
+		person_resource_uri=self.polare_get_person_uri(registration_id)	
+
 		target_fields= set(self.congressman_mapping.values())
 		self.congressmen_memberships=[]
 		anchor_date= date(2099,1,1)
@@ -113,7 +121,7 @@ class PoliticalPartyMembershipSpider(scrapy.Spider):
 				if item.tag in self.congressman_mapping:
 					key=self.congressman_mapping[item.tag]
 					congressman[key]=formatter(item.text) 
-
+					
 				if item.tag == 'periodosExercicio': 	
 					draft_date=self.parsenode_draft_dates(item)
 
@@ -123,9 +131,9 @@ class PoliticalPartyMembershipSpider(scrapy.Spider):
 				if draft_date < anchor_date and len(memberships)>0: 						
 					for i, membership in enumerate(memberships):
 						if draft_date < anchor_date and i == 0:
-							c_m=congressman_membership(congressman, membership, draft_date)
+							c_m=congressman_membership(congressman, membership, draft_date,person_resource_uri)
 							self.congressmen_memberships.append(c_m)
-						c_m=congressman_membership(congressman, membership)
+						c_m=congressman_membership(congressman, membership, person_resource_uri=person_resource_uri)
 						self.congressmen_memberships.append(c_m)
 
 					
@@ -179,11 +187,22 @@ class PoliticalPartyMembershipSpider(scrapy.Spider):
 
 		return memberships	
 
-def congressman_membership(congressman, membership, draft_date=None):		
+	def polare_get_person_uri(self, registration_id):	
+		# import code; code.interact(local=dict(globals(), **locals()))		
+		ind= self.df_congressmen['ideCadastro'] == int(registration_id)
+		if np.any(ind):			
+			person_resource_uri=self.df_congressmen.index[ind][0]
+
+		else:
+			person_resource_uri=None 
+		return person_resource_uri
+
+def congressman_membership(congressman, membership,draft_date=None, person_resource_uri=None):		
 		c_m={}
 		#Defines person resource uri
 		
-		person_resource_uri=formatter_person_resource_uri(congressman['name'], congressman['birth_date'])	
+		if not(person_resource_uri):
+			person_resource_uri=formatter_person_resource_uri(congressman['name'], congressman['birth_date'])	
 		c_m['person_resource_uri']=person_resource_uri
 		if draft_date:
 			affiliation_date=formatter_affiliation_date(draft_date)

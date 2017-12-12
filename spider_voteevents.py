@@ -31,6 +31,7 @@
 	Scrapy running: scrapy runspider spider_voteevents.py
 
 	Scrapy run + store: scrapy runspider  spider_voteevents.py -o voteevents.json
+	run+store: scrapy runspider spider_voteevents.py  -a tipo='PEC' -a numero='171' -a ano='1993' -o PEC17193.json
 '''
 from datetime import datetime 
 import scrapy
