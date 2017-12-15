@@ -15,6 +15,7 @@
 import scrapy
 import re 
 
+from resource_uri.getters import get_party_uri_by_code
 from resource_uri.definitions import define_party_resource_uri
 stopwords=[
 	'\n'
@@ -38,14 +39,14 @@ class TsePoliticalPartiesSpider(scrapy.Spider):
 
 	def __init__(self,  *args,**kwargs):
 			super(scrapy.Spider).__init__(*args,**kwargs)		
-			# self.date_regexp=re.compile('^[0-9|\.]')
+			self.dbparties = get_party_uri_by_code()
 	
 	def parse(self, response): 
 		# tds = response.xpath('//tbody/tr//td[@class="tabelas"]')
 		tds = response.xpath('//tbody/tr//td')
 		ncols=6
-		parties= {} 
-		is_ready=False
+		this_party= {} 
+		# is_ready=False
 		for i, td in enumerate(tds):			
 			row = int(i / ncols)
 			col = i - row*ncols
@@ -56,22 +57,25 @@ class TsePoliticalPartiesSpider(scrapy.Spider):
 
 				# Due to weird formatting we must grab the first non-empty value				
 				value=formatter(values, field_name)				
-				parties[field_name]= value
+				this_party[field_name]= value
 
-				if not(is_ready):
-					if test_is_ready(parties):
-						founding_date_array=parties['party_founding_date'].split('-')
-						
-						parties['party_resource_uri']= 	\
-							POLARE_PREFIX + \
-							define_party_resource_uri(parties['party_id'], *founding_date_array)					
+				if field_name == 'party_code':
+					this_party['party_resource_uri']= self.dbparties[value]
+				# if not(is_ready):
+				# 	if test_is_ready(parties):
+				# 		founding_date_array=parties['party_founding_date'].split('-')
+			
+				# 		parties['party_resource_uri']= 	\
+				# 			POLARE_PREFIX + \
+				# 			define_party_resource_uri(parties['party_id'], *founding_date_array)					
 			
 			if (col == ncols-1):
-				yield parties
-				parties={}
+				yield this_party
+				this_party={}
 
-def test_is_ready(parties):
-	return ('party_founding_date' in parties) and ('party_id' in parties)
+# for geenerated ids
+# def test_is_ready(parties):
+# 	return ('party_founding_date' in parties) and ('party_id' in parties)
 
 def formatter(values, field_name):				
 	'''

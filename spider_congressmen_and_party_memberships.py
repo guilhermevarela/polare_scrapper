@@ -30,7 +30,7 @@ import pandas as pd
 import numpy as np 
 
 #resource_uri generation and testing
-from resource_uri import define_person_resource_uri
+from resource_uri.definitions import define_person_resource_uri
 
 POLARE_PREFIX='http://www.seliganapolitica.org/resource/'
 URL_OPEN_DATA_CAMARA_API_V1= 'http://www.camara.leg.br/SitCamaraWS/Deputados.asmx/'
