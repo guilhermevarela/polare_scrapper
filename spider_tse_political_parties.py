@@ -16,7 +16,7 @@ import scrapy
 import re 
 
 from resource_uri.getters import get_party_uri_by_code
-from resource_uri.definitions import define_party_resource_uri
+from resource_uri.setters import set_party_resource_uri
 stopwords=[
 	'\n'
 ]
@@ -67,7 +67,7 @@ class TsePoliticalPartiesSpider(scrapy.Spider):
 			
 				# 		parties['party_resource_uri']= 	\
 				# 			POLARE_PREFIX + \
-				# 			define_party_resource_uri(parties['party_id'], *founding_date_array)					
+				# 			set_party_resource_uri(parties['party_id'], *founding_date_array)					
 			
 			if (col == ncols-1):
 				yield this_party

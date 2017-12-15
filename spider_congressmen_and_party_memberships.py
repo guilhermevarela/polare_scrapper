@@ -17,7 +17,7 @@
 
 	Scrapy running: scrapy runspider spider_congressmen_and_party_memberships.py
 
-	Scrapy run + store: scrapy runspider spider_congressmen_and_party_memberships.py -o congressman_and_party_membership_test.json
+	Scrapy run + store: scrapy runspider spider_congressmen_and_party_memberships.py -o congressman_and_party_membership.json
 '''
 from datetime import datetime
 from datetime import date 
@@ -30,7 +30,8 @@ import pandas as pd
 import numpy as np 
 
 #resource_uri generation and testing
-from resource_uri.definitions import define_person_resource_uri
+from resource_uri.getters import get_congressmen_uri_by_apiid, get_party_uri_by_code
+from resource_uri.setters import set_person_resource_uri
 
 POLARE_PREFIX='http://www.seliganapolitica.org/resource/'
 URL_OPEN_DATA_CAMARA_API_V1= 'http://www.camara.leg.br/SitCamaraWS/Deputados.asmx/'
@@ -58,7 +59,7 @@ class CongressmenAndPartyMembershipsSpider(scrapy.Spider):
 	def __init__(self, *args,**kwargs):
 		super(scrapy.Spider).__init__(*args,**kwargs)				
 		# import code; code.interact(local=dict(globals(), **locals()))		
-		self.df_congressmen = pd.read_csv('resource_uris/person_resource_uri.csv', sep=' ', index_col=0)		
+		self.dbcongressmen = get_congressmen_uri_by_apiid()
 		self.congressmen={} # use registration id as key
 	
 
@@ -110,8 +111,11 @@ class CongressmenAndPartyMembershipsSpider(scrapy.Spider):
 
 		root = ET.fromstring(response.body_as_unicode()) 
 
-		registration_id=response.meta['registration_id']
-		person_resource_uri=self.polare_get_person_uri(registration_id)	
+		registration_id=int(response.meta['registration_id'])
+		person_resource_uri=None 
+		if registration_id in self.dbcongressmen:
+			person_resource_uri=self.dbcongressmen[registration_id]
+		# person_resource_uri=self.polare_get_person_uri(registration_id)	
 		
 
 		target_fields= set(self.congressman_mapping.values())
@@ -143,14 +147,14 @@ class CongressmenAndPartyMembershipsSpider(scrapy.Spider):
 							c_m=congressman_membership(membership, start_date, use_previous_party=True) 	
 							c_m['person_resource_uri']=person_resource_uri							
 							new_name='%s %s' % (congressman['name'][0],congressman['name'][-1])
-							c_m['generated_person_resource_uri']=define_person_resource_uri(new_name, congressman['birth_date'][-2:])
+							c_m['generated_person_resource_uri']=set_person_resource_uri(new_name, congressman['birth_date'][-2:])
 							self.congressmen_memberships.append(c_m)
 							start_date=c_m['finish_date']
 
 						c_m=congressman_membership(membership, start_date)
 						c_m['person_resource_uri']=person_resource_uri
 						new_name='%s %s' % (congressman['name'][0],congressman['name'][-1])
-						c_m['generated_person_resource_uri']=define_person_resource_uri(new_name, congressman['birth_date'][-2:])
+						c_m['generated_person_resource_uri']=set_person_resource_uri(new_name, congressman['birth_date'][-2:])
 						start_date=c_m['finish_date']
 						self.congressmen_memberships.append(c_m)					
 					break	
@@ -203,14 +207,14 @@ class CongressmenAndPartyMembershipsSpider(scrapy.Spider):
 
 		return memberships	
 
-	def polare_get_person_uri(self, registration_id):	
-		# import code; code.interact(local=dict(globals(), **locals()))		
-		ind= self.df_congressmen['ideCadastro'] == int(registration_id)
-		if np.any(ind):			
-			person_resource_uri=self.df_congressmen.index[ind][0]
-		else:
-			person_resource_uri=None 
-		return person_resource_uri
+	# def polare_get_person_uri(self, registration_id):	
+	# 	# import code; code.interact(local=dict(globals(), **locals()))		
+	# 	ind= self.df_congressmen['ideCadastro'] == int(registration_id)
+	# 	if np.any(ind):			
+	# 		person_resource_uri=self.df_congressmen.index[ind][0]
+	# 	else:
+	# 		person_resource_uri=None 
+	# 	return person_resource_uri
 
 def congressman_membership(membership, start_date, use_previous_party=False):		
 		c_m={}

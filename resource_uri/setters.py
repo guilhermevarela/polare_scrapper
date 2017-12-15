@@ -10,7 +10,9 @@
 import hashlib
 
 
-def define_person_resource_uri(name, year):
+POLARE_PREFIX='http://www.seliganapolitica.org/resource/'
+
+def set_person_resource_uri(name, year):
 	'''
 		Generates uri for foaf:Person		
 
@@ -35,10 +37,10 @@ def define_person_resource_uri(name, year):
 	resource_id = resource_id+','+year1
 	resource_id = resource_id.encode('utf-8');
 	
-	return hashlib.md5(resource_id).hexdigest()
+	return POLARE_PREFIX + hashlib.md5(resource_id).hexdigest()
 
 
-def  define_party_resource_uri(party_number, founding_yyyy, 
+def  set_party_resource_uri(party_number, founding_yyyy, 
 																		founding_mm, founding_dd):
 	'''
 		Generates uri for a org:FormalOrganization
@@ -75,4 +77,4 @@ def  define_party_resource_uri(party_number, founding_yyyy,
 	
 	resource_id = '%s,%s,%s,%s' % (party_number, founding_yyyy, founding_mm, founding_dd)
 	resource_id =resource_id.encode('utf-8')
-	return hashlib.md5(resource_id).hexdigest()
+	return POLARE_PREFIX + hashlib.md5(resource_id).hexdigest()
