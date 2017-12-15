@@ -17,7 +17,7 @@
 
 	Scrapy running: scrapy runspider spider_congressmen_and_party_memberships.py
 
-	Scrapy run + store: scrapy runspider spider_congressmen_and_party_memberships.py -o congressman_and_party_membership.json
+	Scrapy run + store: scrapy runspider spider_congressmen_and_party_memberships.py -o congressman_and_party_membership_test.json
 '''
 from datetime import datetime
 from datetime import date 
@@ -28,6 +28,9 @@ import xml.etree.ElementTree as ET
 #import because of files
 import pandas as pd 
 import numpy as np 
+
+#resource_uri generation and testing
+from resource_uri import define_person_resource_uri
 
 POLARE_PREFIX='http://www.seliganapolitica.org/resource/'
 URL_OPEN_DATA_CAMARA_API_V1= 'http://www.camara.leg.br/SitCamaraWS/Deputados.asmx/'
@@ -113,7 +116,7 @@ class CongressmenAndPartyMembershipsSpider(scrapy.Spider):
 
 		target_fields= set(self.congressman_mapping.values())
 		self.congressmen_memberships=[]
-		draft_date= date(2099,1,1)
+		draft_date= formatter_date(date(2099,1,1))
 		
 		memberships=[]
 		for congressman_details in root: 
@@ -123,7 +126,8 @@ class CongressmenAndPartyMembershipsSpider(scrapy.Spider):
 				if item.tag in self.congressman_mapping:
 					key=self.congressman_mapping[item.tag]
 					congressman[key]=formatter(item.text) 
-					
+				
+
 				if item.tag == 'periodosExercicio': 	
 					start_date=self.parsenode_draft_dates(item)
 
@@ -131,24 +135,25 @@ class CongressmenAndPartyMembershipsSpider(scrapy.Spider):
 					memberships=self.parsenode_memberships(item)
 
 				if start_date < draft_date and len(memberships)>0: 											
-					# import code; code.interact(local=dict(globals(), **locals()))								
 					if not(person_resource_uri):
 						person_resource_uri=formatter_person_resource_uri(congressman['name'], congressman['birth_date'])	
 
 					for i, membership in enumerate(memberships):
 						if formatter_date(start_date) < formatter_date(draft_date) and i == 0:
-
 							c_m=congressman_membership(membership, start_date, use_previous_party=True) 	
-							c_m['person_resource_uri']=person_resource_uri
+							c_m['person_resource_uri']=person_resource_uri							
+							new_name='%s %s' % (congressman['name'][0],congressman['name'][-1])
+							c_m['generated_person_resource_uri']=define_person_resource_uri(new_name, congressman['birth_date'][-2:])
 							self.congressmen_memberships.append(c_m)
 							start_date=c_m['finish_date']
 
 						c_m=congressman_membership(membership, start_date)
 						c_m['person_resource_uri']=person_resource_uri
+						new_name='%s %s' % (congressman['name'][0],congressman['name'][-1])
+						c_m['generated_person_resource_uri']=define_person_resource_uri(new_name, congressman['birth_date'][-2:])
 						start_date=c_m['finish_date']
 						self.congressmen_memberships.append(c_m)					
 					break	
-					
 				# start_date=draft_date	
 				memberships=[]
 		for c_m in self.congressmen_memberships:
@@ -172,7 +177,7 @@ class CongressmenAndPartyMembershipsSpider(scrapy.Spider):
 					this_date=datetime.strptime(subsubitem.text, '%d/%m/%Y').date()   
 					if this_date<=draft_date:
 						draft_date=this_date
-		return draft_date
+		return formatter_date(draft_date)
 
 	def parsenode_memberships(self, root_memberships):
 		'''
@@ -210,7 +215,7 @@ class CongressmenAndPartyMembershipsSpider(scrapy.Spider):
 def congressman_membership(membership, start_date, use_previous_party=False):		
 		c_m={}
 
-		start_date=formatter_date(start_date)	
+		# start_date=formatter_date(start_date)	
 		if use_previous_party:
 			party_code=membership['previous_party_id']
 		else:
@@ -230,7 +235,7 @@ def formatter(rawtext):
 	'''
 		Removes malformed characters
 	'''
-	return re.sub(r'[^A-Za-z0-9|\/]','',rawtext) 
+	return re.sub(r'[^A-Za-z0-9|\/| ]','',rawtext) 
 
 
 def formatter_party_resource_uri(partyid):
