@@ -72,6 +72,7 @@ def  define_party_resource_uri(party_number, founding_yyyy,
 	if len(founding_dd)!=2:
 		raise ValueError('Founding day must be a 2 digit string')	
 
+	
 	resource_id = '%s,%s,%s,%s' % (party_number, founding_yyyy, founding_mm, founding_dd)
-
+	resource_id =resource_id.encode('utf-8')
 	return hashlib.md5(resource_id).hexdigest()

@@ -15,10 +15,12 @@
 import scrapy
 import re 
 
+from resource_uri.definitions import define_party_resource_uri
 stopwords=[
 	'\n'
 ]
 
+POLARE_PREFIX='http://www.seliganapolitica.org/resource/'
 
 class TsePoliticalPartiesSpider(scrapy.Spider):
 	name= 'tse_political_parties'
@@ -43,7 +45,7 @@ class TsePoliticalPartiesSpider(scrapy.Spider):
 		tds = response.xpath('//tbody/tr//td')
 		ncols=6
 		parties= {} 
-
+		is_ready=False
 		for i, td in enumerate(tds):			
 			row = int(i / ncols)
 			col = i - row*ncols
@@ -52,15 +54,24 @@ class TsePoliticalPartiesSpider(scrapy.Spider):
 				values=  td.xpath('.//text()').extract()
 				field_name=self.column_fields[col]
 
-				# Due to weird formatting we must grab the first non-empty value
-				
+				# Due to weird formatting we must grab the first non-empty value				
 				value=formatter(values, field_name)				
-
 				parties[field_name]= value
+
+				if not(is_ready):
+					if test_is_ready(parties):
+						founding_date_array=parties['party_founding_date'].split('-')
+						
+						parties['party_resource_uri']= 	\
+							POLARE_PREFIX + \
+							define_party_resource_uri(parties['party_id'], *founding_date_array)					
 			
 			if (col == ncols-1):
 				yield parties
 				parties={}
+
+def test_is_ready(parties):
+	return ('party_founding_date' in parties) and ('party_id' in parties)
 
 def formatter(values, field_name):				
 	'''
@@ -74,7 +85,6 @@ def formatter(values, field_name):
 		OUTPUT:
 			result<str> the single string representing the formatted text
 	'''	
-
 	values=list(filter(lambda x : not(x in stopwords), values))
 	result=values[0] if len(values)>0 else None			
 	if not(result==None):
