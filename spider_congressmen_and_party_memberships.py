@@ -59,7 +59,8 @@ class CongressmenAndPartyMembershipsSpider(scrapy.Spider):
 	def __init__(self, *args,**kwargs):
 		super(scrapy.Spider).__init__(*args,**kwargs)				
 		# import code; code.interact(local=dict(globals(), **locals()))		
-		self.dbcongressmen = get_congressmen_uri_by_apiid()
+		self.db_congressmen_uri = get_congressmen_uri_by_apiid()
+		self.db_party_uri= get_party_uri_by_code()
 		self.congressmen={} # use registration id as key
 	
 
@@ -113,9 +114,8 @@ class CongressmenAndPartyMembershipsSpider(scrapy.Spider):
 
 		registration_id=int(response.meta['registration_id'])
 		person_resource_uri=None 
-		if registration_id in self.dbcongressmen:
-			person_resource_uri=self.dbcongressmen[registration_id]
-		# person_resource_uri=self.polare_get_person_uri(registration_id)	
+		if registration_id in self.db_congressmen_uri:
+			person_resource_uri=self.db_congressmen_uri[registration_id]
 		
 
 		target_fields= set(self.congressman_mapping.values())
@@ -139,24 +139,22 @@ class CongressmenAndPartyMembershipsSpider(scrapy.Spider):
 					memberships=self.parsenode_memberships(item)
 
 				if start_date < draft_date and len(memberships)>0: 											
-					if not(person_resource_uri):
-						person_resource_uri=formatter_person_resource_uri(congressman['name'], congressman['birth_date'])	
+					congressman['person_resource_uri']=person_resource_uri
+					congressman['test_person_resource_uri']=formatter_person_resource_uri(congressman['name'], congressman['birth_date'])	
+					# if not(person_resource_uri):
+					# 	person_resource_uri=formatter_person_resource_uri(congressman['name'], congressman['birth_date'])	
+
 
 					for i, membership in enumerate(memberships):
 						if formatter_date(start_date) < formatter_date(draft_date) and i == 0:
-							c_m=congressman_membership(membership, start_date, use_previous_party=True) 	
-							c_m['person_resource_uri']=person_resource_uri							
-							new_name='%s %s' % (congressman['name'][0],congressman['name'][-1])
-							c_m['generated_person_resource_uri']=set_person_resource_uri(new_name, congressman['birth_date'][-2:])
-							self.congressmen_memberships.append(c_m)
-							start_date=c_m['finish_date']
+							congressman_membership= self.output_congressman_membership(congressman, membership, start_date, use_previous_party=True)		
+														
+							self.congressmen_memberships.append(congressman_membership)
+							start_date=congressman_membership['finish_date']
 
-						c_m=congressman_membership(membership, start_date)
-						c_m['person_resource_uri']=person_resource_uri
-						new_name='%s %s' % (congressman['name'][0],congressman['name'][-1])
-						c_m['generated_person_resource_uri']=set_person_resource_uri(new_name, congressman['birth_date'][-2:])
-						start_date=c_m['finish_date']
-						self.congressmen_memberships.append(c_m)					
+						congressman_membership= self.output_congressman_membership(congressman, membership, start_date)								
+						start_date=congressman_membership['finish_date']
+						self.congressmen_memberships.append(congressman_membership)					
 					break	
 				# start_date=draft_date	
 				memberships=[]
@@ -207,19 +205,9 @@ class CongressmenAndPartyMembershipsSpider(scrapy.Spider):
 
 		return memberships	
 
-	# def polare_get_person_uri(self, registration_id):	
-	# 	# import code; code.interact(local=dict(globals(), **locals()))		
-	# 	ind= self.df_congressmen['ideCadastro'] == int(registration_id)
-	# 	if np.any(ind):			
-	# 		person_resource_uri=self.df_congressmen.index[ind][0]
-	# 	else:
-	# 		person_resource_uri=None 
-	# 	return person_resource_uri
+	def output_congressman_membership(self, congressman, membership, start_date, use_previous_party=False):		
+		congressman_membership={}
 
-def congressman_membership(membership, start_date, use_previous_party=False):		
-		c_m={}
-
-		# start_date=formatter_date(start_date)	
 		if use_previous_party:
 			party_code=membership['previous_party_id']
 		else:
@@ -228,12 +216,17 @@ def congressman_membership(membership, start_date, use_previous_party=False):
 		finish_date=membership['posterior_party_affiliation_date']	
 		finish_date=formatter_date(finish_date)
 		party_id=membership['posterior_party_id']
-		
-		c_m['party_resource_uri']=formatter_party_resource_uri(party_code)
-		c_m['start_date']=start_date
-		c_m['finish_date']=finish_date
 
-		return c_m
+		congressman_membership['person_resource_uri']=congressman['person_resource_uri']
+		congressman_membership['test_person_resource_uri']=congressman['test_person_resource_uri']
+		congressman_membership['party_resource_uri']=self.db_party_uri[party_code]
+		congressman_membership['party_code']=party_code
+		congressman_membership['party_id']=party_id
+		congressman_membership['start_date']=start_date
+		congressman_membership['finish_date']=finish_date
+
+		return congressman_membership
+
 
 def formatter(rawtext):
 	'''
@@ -246,7 +239,11 @@ def formatter_party_resource_uri(partyid):
 	return 'object/' + partyid
 
 def formatter_person_resource_uri(person_name, person_birthdate):
-	return 'object/' + person_name + person_birthdate
+	aryname=person_name.split(' ')
+	new_name='%s %s' % (aryname[0], aryname[-1])
+	yy= person_birthdate[-2:]
+	# c_m['test_person_resource_uri']=set_person_resource_uri(new_name, congressman['birth_date'][-2:])	
+	return set_person_resource_uri(new_name, yy)	
 
 def formatter_date(this_date):
 	if isinstance(this_date, str):
