@@ -33,6 +33,9 @@ import numpy as np
 from resource_uri.getters import get_congressmen_uri_by_apiid, get_party_uri_by_code
 from resource_uri.setters import set_person_resource_uri
 
+# Unique id without Network address
+from uuid import uuid4 
+
 POLARE_PREFIX='http://www.seliganapolitica.org/resource/'
 URL_OPEN_DATA_CAMARA_API_V1= 'http://www.camara.leg.br/SitCamaraWS/Deputados.asmx/'
 
@@ -144,7 +147,6 @@ class CongressmenAndPartyMembershipsSpider(scrapy.Spider):
 
 
 					for i, membership_transition in enumerate(membership_transitions):
-						# import code; code.interact(local=dict(globals(), **locals()))			
 						if formatter_date(start_date) < formatter_date(draft_date) and i == 0:
 							congressman_membership= self.output_congressman_membership(congressman, membership_transition, start_date, use_previous_party=True)		
 							
@@ -163,6 +165,7 @@ class CongressmenAndPartyMembershipsSpider(scrapy.Spider):
 
 				membership_transitions=[]
 		for c_m in self.congressmen_memberships:
+			c_m['membership_resource_uri']= str(uuid4())
 			yield c_m 				
 
 
