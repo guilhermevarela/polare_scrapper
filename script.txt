@@ -1,6 +1,0 @@
-scrapy runspider spider_voteevents.py -a tipo='PEC' -a numero='171'   -a ano='1993' -o PEC17193.json
-scrapy runspider spider_voteevents.py -a tipo='PEC' -a numero='395'   -a ano='2014' -o PEC39514.json
-scrapy runspider spider_voteevents.py -a tipo='PEC' -a numero='241'   -a ano='2016' -o PEC24116.json
-scrapy runspider spider_voteevents.py -a tipo='PL'  -a numero='4.302' -a ano='1998' -o PL430298.json
-scrapy runspider spider_voteevents.py -a tipo='PL'  -a numero='6787' -a ano='2016' -o PL678716.json
-scrapy runspider spider_voteevents.py -a tipo='MPV' -a numero='756'   -a ano='2016' -o MPV75616.json

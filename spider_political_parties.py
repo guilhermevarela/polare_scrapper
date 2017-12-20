@@ -10,7 +10,7 @@
 
 	Scrapy running: scrapy runspider spider_tse_parties.py
 
-	Scrapy run + store: scrapy runspider spider_tse_political_parties.py -o tse_political_parties.json
+	Scrapy run + store: scrapy runspider spider_political_parties.py -o datasets/political_parties.json
 '''
 import scrapy
 import re 
@@ -61,21 +61,10 @@ class TsePoliticalPartiesSpider(scrapy.Spider):
 
 				if field_name == 'party_code':
 					this_party['party_resource_uri']= self.dbparties[value]
-				# if not(is_ready):
-				# 	if test_is_ready(parties):
-				# 		founding_date_array=parties['party_founding_date'].split('-')
-			
-				# 		parties['party_resource_uri']= 	\
-				# 			POLARE_PREFIX + \
-				# 			set_party_resource_uri(parties['party_id'], *founding_date_array)					
 			
 			if (col == ncols-1):
 				yield this_party
 				this_party={}
-
-# for geenerated ids
-# def test_is_ready(parties):
-# 	return ('party_founding_date' in parties) and ('party_id' in parties)
 
 def formatter(values, field_name):				
 	'''

@@ -37,7 +37,7 @@ def set_person_resource_uri(name, year):
 	resource_id = resource_id+','+year1
 	resource_id = resource_id.encode('utf-8');
 	
-	return POLARE_PREFIX + hashlib.md5(resource_id).hexdigest()
+	return hashlib.md5(resource_id).hexdigest()
 
 
 def  set_party_resource_uri(party_number, founding_yyyy, 

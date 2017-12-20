@@ -17,7 +17,7 @@
 
 	Scrapy running: scrapy runspider spider_congressmen_and_party_memberships.py
 
-	Scrapy run + store: scrapy runspider spider_congressmen_and_party_memberships.py -o congressman_and_party_membership.json
+	Scrapy run + store: scrapy runspider spider_congressmen_and_party_memberships.py -o datasets/congressman_and_party_membership.json
 '''
 from datetime import datetime
 from datetime import date 
@@ -52,8 +52,8 @@ class CongressmenAndPartyMembershipsSpider(scrapy.Spider):
 	 	'nomeCivil': 'name',
 	 	'nomeParlamentarAtual': 'congressman_name',
 		'dataNascimento': 'birth_date',
-		'idPartidoAnterior':  'previous_party_id',
-		'idPartidoPosterior': 'posterior_party_id',
+		'idPartidoAnterior':  'previous_party_code',
+		'idPartidoPosterior': 'posterior_party_code',
 		'dataFiliacaoPartidoPosterior':  'posterior_party_affiliation_date',		
 	}
 	def __init__(self, *args,**kwargs):
@@ -122,7 +122,7 @@ class CongressmenAndPartyMembershipsSpider(scrapy.Spider):
 		self.congressmen_memberships=[]
 		draft_date= formatter_date(date(2099,1,1))
 		
-		memberships=[]
+		membership_transitions=[]
 		for congressman_details in root: 
 			congressman={}
 			start_date= draft_date	
@@ -136,28 +136,32 @@ class CongressmenAndPartyMembershipsSpider(scrapy.Spider):
 					start_date=self.parsenode_draft_dates(item)
 
 				if item.tag == 'filiacoesPartidarias':		
-					memberships=self.parsenode_memberships(item)
+					membership_transitions=self.parsenode_membership_transitions(item)
 
-				if start_date < draft_date and len(memberships)>0: 											
+				if start_date < draft_date and len(membership_transitions)>0: 											
 					congressman['person_resource_uri']=person_resource_uri
 					congressman['test_person_resource_uri']=formatter_person_resource_uri(congressman['name'], congressman['birth_date'])	
-					# if not(person_resource_uri):
-					# 	person_resource_uri=formatter_person_resource_uri(congressman['name'], congressman['birth_date'])	
 
 
-					for i, membership in enumerate(memberships):
+					for i, membership_transition in enumerate(membership_transitions):
+						# import code; code.interact(local=dict(globals(), **locals()))			
 						if formatter_date(start_date) < formatter_date(draft_date) and i == 0:
-							congressman_membership= self.output_congressman_membership(congressman, membership, start_date, use_previous_party=True)		
-														
-							self.congressmen_memberships.append(congressman_membership)
-							start_date=congressman_membership['finish_date']
+							congressman_membership= self.output_congressman_membership(congressman, membership_transition, start_date, use_previous_party=True)		
+							
+							start_date=congressman_membership['finish_date']							
+							# prevent SEM PARTIDO to have a membership
+							if not(congressman_membership['party_code']=='SPART'): 
+								self.congressmen_memberships.append(congressman_membership) 
+							
 
-						congressman_membership= self.output_congressman_membership(congressman, membership, start_date)								
+						congressman_membership= self.output_congressman_membership(congressman, membership_transition, start_date)								
 						start_date=congressman_membership['finish_date']
-						self.congressmen_memberships.append(congressman_membership)					
+						# prevent SEM PARTIDO to have a membership
+						if not(congressman_membership['party_code']=='SPART'): 
+							self.congressmen_memberships.append(congressman_membership)
 					break	
-				# start_date=draft_date	
-				memberships=[]
+
+				membership_transitions=[]
 		for c_m in self.congressmen_memberships:
 			yield c_m 				
 
@@ -181,7 +185,7 @@ class CongressmenAndPartyMembershipsSpider(scrapy.Spider):
 						draft_date=this_date
 		return formatter_date(draft_date)
 
-	def parsenode_memberships(self, root_memberships):
+	def parsenode_membership_transitions(self, root_memberships):
 		'''
 			INPUT
 				root_draftperiods: root node to congress man's drafts
@@ -190,7 +194,8 @@ class CongressmenAndPartyMembershipsSpider(scrapy.Spider):
 				list<dict<str,str>>: returns a list of memberships
 		'''				
 		memberships=[]
-		stop_fields=set(['previous_party_id','posterior_party_id','posterior_party_affiliation_date'])
+		stop_fields=set(['previous_party_code','posterior_party_code','posterior_party_affiliation_date'])
+
 		for subitem in root_memberships: #filiacaoPartidaria
 			membership={}
 			for subsubitem in subitem:
@@ -205,23 +210,22 @@ class CongressmenAndPartyMembershipsSpider(scrapy.Spider):
 
 		return memberships	
 
-	def output_congressman_membership(self, congressman, membership, start_date, use_previous_party=False):		
+	def output_congressman_membership(self, congressman, membership_transition, start_date, use_previous_party=False):				
 		congressman_membership={}
 
 		if use_previous_party:
-			party_code=membership['previous_party_id']
+			party_code=membership_transition['previous_party_code']
 		else:
-			party_code=membership['posterior_party_id']
+			party_code=membership_transition['posterior_party_code']
 
-		finish_date=membership['posterior_party_affiliation_date']	
+		finish_date=membership_transition['posterior_party_affiliation_date']	
 		finish_date=formatter_date(finish_date)
-		party_id=membership['posterior_party_id']
+		
 
 		congressman_membership['person_resource_uri']=congressman['person_resource_uri']
-		congressman_membership['test_person_resource_uri']=congressman['test_person_resource_uri']
-		congressman_membership['party_resource_uri']=self.db_party_uri[party_code]
+		congressman_membership['test_person_resource_uri']=congressman['test_person_resource_uri']		
 		congressman_membership['party_code']=party_code
-		congressman_membership['party_id']=party_id
+		congressman_membership['party_resource_uri']=self.db_party_uri[party_code] if not(party_code=='SPART') else None 		
 		congressman_membership['start_date']=start_date
 		congressman_membership['finish_date']=finish_date
 
