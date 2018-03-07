@@ -59,9 +59,9 @@ class SenadorAndPartyMembershipsSpider(scrapy.Spider):
 	}
 
 	senador_mapping={
-	 	'CodigoParlamentar': 'person_registration_id',
-	 	'NomeCompletoParlamentar': 'name',
-	 	'NomeParlamentar': 'alias',
+	 	'CodigoParlamentar': 'skos:prefLabel',
+	 	'NomeCompletoParlamentar': 'rdfs:label',
+	 	'NomeParlamentar': 'rdfs:seeAlso',
 		'Mandatos': [],
 		'Afiliacoes': [],
 	}
@@ -72,9 +72,16 @@ class SenadorAndPartyMembershipsSpider(scrapy.Spider):
 			'{:}lista/legislatura/{:}'.format(URL_OPEN_DATA_SENADO_API_V1, legislatura)
 		]
 
+		# Roles dictionary
 		d= pd.read_csv('resource_uri/role_resource_uri.csv', sep= ';', index_col=0).to_dict()['skos:prefLabel']
 		self.db_roles = {v:k for k,v in d.items()}		
-	
+
+		# Senador uri's
+		df= pd.read_csv('resource_uri/senadores_resource_uri-55.csv', sep= ';', index_col=0)		
+		d= df['rdfs:label'].to_dict()		
+		self.db_senadores = {v:k for k,v in d.items()}		
+
+		
 
 	def start_requests(self): 
 		'''
@@ -98,24 +105,38 @@ class SenadorAndPartyMembershipsSpider(scrapy.Spider):
 		'''					
 
 		root = ET.fromstring(response.body_as_unicode()) 				
-		for item in root: 
-			if item.tag == 'Parlamentares':
-				parlamentares = item					
-				for parlamentar in parlamentares:
-					info={}
-					for parlamentar_description in parlamentar:
-						if parlamentar_description.tag == 'IdentificacaoParlamentar':						
-							info= self._parse_senador_identification(parlamentar_description, info)							
-							# import code; code.interact(local=dict(globals(), **locals()))
-							# req = scrapy.Request(senador_api_v1_uri(person_registration_id), 
-							# 	self.parse_senador_details, 
-							# 	headers= {'accept': 'application/json'}, 
-							# 	meta=info
-							# )
-						if parlamentar_description.tag == 'Mandatos':
-							mandatos= parlamentar_description
-							info= self._parse_senador_with_senado_memberships(parlamentar_description, info)													
-							yield info
+		parlamentares_elem= root.findall('./Parlamentares/Parlamentar') # XPath element
+		for parlamentar_elem in  parlamentares_elem:			
+			info={}
+			for id_elem in parlamentar_elem.findall('./IdentificacaoParlamentar/'):
+				if id_elem.tag in self.senador_mapping:
+					key= self.senador_mapping[id_elem.tag]
+					info[key]= id_elem.text
+			# import code; code.interact(local=dict(globals(), **locals()))
+			# all person characteristics are filled
+			info['resource_uri']= self.db_senadores[info['rdfs:label']]								
+			yield info 		
+
+		# for item in root: 
+		# 	if item.tag == 'Parlamentares':
+		# 		parlamentares = item					
+		# 		for parlamentar in parlamentares:
+		# 			info={}
+		# 			for parlamentar_description in parlamentar:						
+		# 				# import code; code.interact(local=dict(globals(), **locals()))
+		# 				self.senador_mapping
+		# 				if parlamentar_description.tag == 'IdentificacaoParlamentar':						
+		# 					info= self._parse_senador_identification(parlamentar_description, info)							
+		# 					# import code; code.interact(local=dict(globals(), **locals()))
+		# 					# req = scrapy.Request(senador_api_v1_uri(person_registration_id), 
+		# 					# 	self.parse_senador_details, 
+		# 					# 	headers= {'accept': 'application/json'}, 
+		# 					# 	meta=info
+		# 					# )
+		# 				if parlamentar_description.tag == 'Mandatos':
+		# 					mandatos= parlamentar_description
+		# 					info= self._parse_senador_with_senado_memberships(parlamentar_description, info)													
+		# 					yield info
 		# import code; code.interact(local=dict(globals(), **locals()))		
 
 	def _parse_senador_identification(self, xmlnode, info):					
