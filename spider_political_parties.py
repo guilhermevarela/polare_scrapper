@@ -35,6 +35,7 @@ class TsePoliticalPartiesSpider(scrapy.Spider):
 	column_fields={1: 'party_code', 
 	2:'party_name', 
 	3:'party_founding_date', 	
+	4:'party_presidency', 	
 	5:'party_id'}
 
 	def __init__(self,  *args,**kwargs):
@@ -89,9 +90,12 @@ def formatter(values, field_name):
 				tmp= regexp_date.split('.')			
 				yyyy= int(tmp[-1])
 				m=int(tmp[1])
-				d=int(tmp[0])
-
+				d=int(tmp[0])						
 			result= '%4d-%02d-%02d' % (yyyy,m,d)
+
+		if 	field_name=='party_presidency':
+			result= result.split(',')[0]
+			import code; code.interact(local=dict(globals(), **locals()))		
 
 	return result
 

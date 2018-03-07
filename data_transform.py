@@ -24,7 +24,6 @@ def json2csv(path2json, outfilename):
 		OUTPUT
 
 	'''
-	# import code; code.interact(local=dict(globals(), **locals()))		
 	this_dict=json.loads(path2json)
 
 if __name__=='__main__':
