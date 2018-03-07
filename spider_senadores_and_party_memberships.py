@@ -51,9 +51,10 @@ class SenadorAndPartyMembershipsSpider(scrapy.Spider):
 		'FEED_EXPORT_ENCODING': 'utf-8' 
 	}
 
-	senador_with_senado_membership = {	
-		'CodigoMandato': 'label',
-		'UfParlamentar': 'Natureza',
+	senator_with_term_membership = {	
+		'CodigoMandato': 'rdfs:label',
+		'UfParlamentar': 'natureza',
+		'NumeroLegislatura': 'legislatura', 
 		'DataInicio': 'startDate',
 		'DataFim': 'finishDate',				
 	}
@@ -62,8 +63,8 @@ class SenadorAndPartyMembershipsSpider(scrapy.Spider):
 	 	'CodigoParlamentar': 'skos:prefLabel',
 	 	'NomeCompletoParlamentar': 'rdfs:label',
 	 	'NomeParlamentar': 'rdfs:seeAlso',
-		'Mandatos': [],
-		'Afiliacoes': [],
+		'terms': [],
+		'affiliations': [],
 	}
 	
 	def __init__(self, legislatura= 55, *args,**kwargs):
@@ -108,13 +109,48 @@ class SenadorAndPartyMembershipsSpider(scrapy.Spider):
 		parlamentares_elem= root.findall('./Parlamentares/Parlamentar') # XPath element
 		for parlamentar_elem in  parlamentares_elem:			
 			info={}
-			for id_elem in parlamentar_elem.findall('./IdentificacaoParlamentar/'):
-				if id_elem.tag in self.senador_mapping:
-					key= self.senador_mapping[id_elem.tag]
-					info[key]= id_elem.text
+			for descriptors_elem in parlamentar_elem.findall('./IdentificacaoParlamentar/'):
+				if descriptors_elem.tag in self.senador_mapping:
+					key= self.senador_mapping[descriptors_elem.tag]
+					info[key]= descriptors_elem.text
+			
+			info['resource_uri']= self.db_senadores[info['rdfs:label']]											
+
+			#fills office terms as senator
+			info['terms']=[]
+			for terms_elem in parlamentar_elem.findall('./Mandatos/'):
+				term={}
+				subterm_count=1
+				for term_elem in terms_elem:					
+					if term_elem.tag in self.senator_with_term_membership:
+						key= self.senator_with_term_membership[term_elem.tag]
+						term[key]= term_elem.text
+					
+					#DateStart/ DateFinish
+
+					if re.search('LegislaturaDoMandato', term_elem.tag):							
+						subterm={}
+						for subterm_elem in term_elem:
+							if subterm_elem.tag in self.senator_with_term_membership:
+								key= str(self.senator_with_term_membership[subterm_elem.tag])
+								subterm[key]= subterm_elem.text												
+
+						subterm.update(term)
+						subterm['resource_uri']= str(uuid4())
+						info['terms'].append(subterm)
+
+			# req = scrapy.Request(url, 
+			# 	self.parse_senador,
+			# 	headers= {'accept': 'application/xml'}
+			# )	
+			# yield req
+
+
+
 			# import code; code.interact(local=dict(globals(), **locals()))
+			# for id_elem in parlamentar_elem.findall('./IdentificacaoParlamentar/'):
 			# all person characteristics are filled
-			info['resource_uri']= self.db_senadores[info['rdfs:label']]								
+			
 			yield info 		
 
 		# for item in root: 
