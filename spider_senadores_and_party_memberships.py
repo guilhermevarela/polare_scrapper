@@ -51,30 +51,19 @@ class SenadorAndPartyMembershipsSpider(scrapy.Spider):
 		'FEED_EXPORT_ENCODING': 'utf-8' 
 	}
 
-	# congressman_mapping={
-	#  	'ideCadastro': 'person_registration_id',
-	#  	'nomeCivil': 'name',
-	#  	'nomeParlamentarAtual': 'congressman_name',
-	# 	'dataNascimento': 'birth_date',
-	# 	'idPartidoAnterior':  'previous_party_code',
-	# 	'idPartidoPosterior': 'posterior_party_code',
-	# 	'dataFiliacaoPartidoPosterior':  'posterior_party_affiliation_date',		
-	# }
-	senador_mapping={
-	 	'CodigoParlamentar': 'person_registration_id',
-	 	'nomeCompletoParlamentar': 'name',
-	 	'nomeParlamentarAtual': 'congressman_name',
-		'dataNascimento': 'birth_date',
-		'idPartidoAnterior':  'previous_party_code',
-		'idPartidoPosterior': 'posterior_party_code',
-		'dataFiliacaoPartidoPosterior':  'posterior_party_affiliation_date',		
+	senador_with_senado_membership = {	
+		'CodigoMandato': 'label',
+		'UfParlamentar': 'Natureza',
+		'DataInicio': 'startDate',
+		'DataFim': 'finishDate',				
 	}
 
-	senador_with_senado_membership = {	
-		'CodigoMandato': 'senado_membership_registration_id',
-		'DataInicio': 'start_date',
-		'DataFim': 'finish_data',
-
+	senador_mapping={
+	 	'CodigoParlamentar': 'person_registration_id',
+	 	'NomeCompletoParlamentar': 'name',
+	 	'NomeParlamentar': 'alias',
+		'Mandatos': [],
+		'Afiliacoes': [],
 	}
 	
 	def __init__(self, legislatura= 55, *args,**kwargs):
@@ -82,11 +71,9 @@ class SenadorAndPartyMembershipsSpider(scrapy.Spider):
 		self.start_urls = [ 
 			'{:}lista/legislatura/{:}'.format(URL_OPEN_DATA_SENADO_API_V1, legislatura)
 		]
-		self.db_roles = pd.read_csv('resource_uri/role_resource_uri.csv', sep= ';', index_col=0).to_dict()['skos:prefLabel']
-		# import code; code.interact(local=dict(globals(), **locals()))		
-		# self.db_congressmen_uri = get_congressmen_uri_by_apiid()
-		# self.db_party_uri= get_party_uri_by_code()
-		# self.congressmen={} # use registration id as key
+
+		d= pd.read_csv('resource_uri/role_resource_uri.csv', sep= ';', index_col=0).to_dict()['skos:prefLabel']
+		self.db_roles = {v:k for k,v in d.items()}		
 	
 
 	def start_requests(self): 
@@ -113,20 +100,23 @@ class SenadorAndPartyMembershipsSpider(scrapy.Spider):
 		root = ET.fromstring(response.body_as_unicode()) 				
 		for item in root: 
 			if item.tag == 'Parlamentares':
-				parlamentares = item	
-				info={}
+				parlamentares = item					
 				for parlamentar in parlamentares:
-					if parlamentar.tag == 'IdentificacaoParlamentar':
-						info= self._parse_senador_identification(parlamentar, info)
-						# req = scrapy.Request(senador_api_v1_uri(person_registration_id), 
-						# 	self.parse_senador_details, 
-						# 	headers= {'accept': 'application/json'}, 
-						# 	meta=info
-						# )
-					if parlamentar.tag == 'Mandatos':
-						self._parse_senador_with_senado_memberships(parlamentar, info)
-						yield info
-
+					info={}
+					for parlamentar_description in parlamentar:
+						if parlamentar_description.tag == 'IdentificacaoParlamentar':						
+							info= self._parse_senador_identification(parlamentar_description, info)							
+							# import code; code.interact(local=dict(globals(), **locals()))
+							# req = scrapy.Request(senador_api_v1_uri(person_registration_id), 
+							# 	self.parse_senador_details, 
+							# 	headers= {'accept': 'application/json'}, 
+							# 	meta=info
+							# )
+						if parlamentar_description.tag == 'Mandatos':
+							mandatos= parlamentar_description
+							info= self._parse_senador_with_senado_memberships(parlamentar_description, info)													
+							yield info
+		# import code; code.interact(local=dict(globals(), **locals()))		
 
 	def _parse_senador_identification(self, xmlnode, info):					
 		'''
@@ -139,9 +129,10 @@ class SenadorAndPartyMembershipsSpider(scrapy.Spider):
 		'''
 		result={} 
 		for item in xmlnode:
-			if item.tag in senador_mapping:
-				result[senador_mapping[item.tag]]= item.txt
-		return result.update(info)
+			if item.tag in self.senador_mapping:								
+				result[self.senador_mapping[item.tag]]= item.text		
+		result.update(info)
+		return result
 
 	def _parse_senador_with_senado_memberships(self, xmlnode, info):	
 		'''
@@ -157,11 +148,23 @@ class SenadorAndPartyMembershipsSpider(scrapy.Spider):
 				dict<string,string> .: 
 
 		'''
+
 		result={}
 		for item in xmlnode:
-			if item.tag in senador_with_senado_membership:
-				result[senador_with_senado_membership[item.tag]]= item.txt
-		result= result.update(info)		
+			for subitem in item:
+				if subitem.tag in self.senador_with_senado_membership:			
+					key=self.senador_with_senado_membership[subitem.tag]
+					result[key]= subitem.text
+				
+				if re.search('LegislaturaDoMandato', subitem.tag):
+					for subsubitem in subitem:
+						if subsubitem.tag in self.senador_with_senado_membership:			
+							key=self.senador_with_senado_membership[subsubitem.tag]
+							result[key]= subsubitem.text
+		
+		result.update(info)		
+		result['role_resource_uri'] = self.db_roles['Senador']
+		return result
 
 		
 
