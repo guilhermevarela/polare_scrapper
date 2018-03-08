@@ -188,34 +188,34 @@ class CongressmenAndPartyMembershipsSpider(scrapy.Spider):
 					current_affiliation=None		
 					info['affiliations'].append(affiliation)
 
-			for term_elem in congressman_elem.findall('./filiacoesPartidarias/'):
-				affiliation={}
-				for tag, key in self.congressman_with_affiliation_membership.items(): 
-					affiliation[key]= affiliation_elem.find('./{:}'.format(tag)).text # finds all keys
+			# for term_elem in congressman_elem.findall('./filiacoesPartidarias/'):
+			# 	affiliation={}
+			# 	for tag, key in self.congressman_with_affiliation_membership.items(): 
+			# 		affiliation[key]= affiliation_elem.find('./{:}'.format(tag)).text # finds all keys
 
-					#customizations  add party uri
-					if key in ['sigla']: 
-						affiliation['party_resource_uri'] = self.db_party_uri[affiliation[key]]
+			# 		#customizations  add party uri
+			# 		if key in ['sigla']: 
+			# 			affiliation['party_resource_uri'] = self.db_party_uri[affiliation[key]]
 
-					if re.search('Date', key):
-						affiliation[key] = formatter_date(affiliation[key])
+			# 		if re.search('Date', key):
+			# 			affiliation[key] = formatter_date(affiliation[key])
 
 
 
-				if info['affiliations']:		# has previous affiliation
-					affiliation['finishDate']=info['affiliations'][-1]['startDate'] 
+			# 	if info['affiliations']:		# has previous affiliation
+			# 		affiliation['finishDate']=info['affiliations'][-1]['startDate'] 
 
-				# adds membership_resource_uri
-				affiliation['membership_resource_uri']=str(uuid4())
-				affiliation['role_resource_uri']= self.db_roles['Afiliado']
+			# 	# adds membership_resource_uri
+			# 	affiliation['membership_resource_uri']=str(uuid4())
+			# 	affiliation['role_resource_uri']= self.db_roles['Afiliado']
 				
-				if current_affiliation:
-					if affiliation['sigla']==current_affiliation['sigla']: # update only the startDate
-						info['affiliations'][-1]['startDate']= affiliation['startDate']
-						current_affiliation=None		
-				else:
-					current_affiliation=None		
-					info['affiliations'].append(affiliation)
+			# 	if current_affiliation:
+			# 		if affiliation['sigla']==current_affiliation['sigla']: # update only the startDate
+			# 			info['affiliations'][-1]['startDate']= affiliation['startDate']
+			# 			current_affiliation=None		
+			# 	else:
+			# 		current_affiliation=None		
+			# 		info['affiliations'].append(affiliation)
 
 
 			yield info
