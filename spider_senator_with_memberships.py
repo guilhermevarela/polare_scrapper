@@ -17,7 +17,7 @@
 
 	Scrapy running: scrapy runspider spider_senator_with_memberships.py
 
-	Scrapy run + store: scrapy runspider spider_senator_with_memberships.py -o datasets/senator_with_memberships-55_56.json
+	Scrapy run + store: scrapy runspider spider_senator_with_memberships.py -o datasets/senator_with_memberships-55_56.json -a legislatura=55
 '''
 from datetime import datetime
 from datetime import date 
@@ -57,7 +57,7 @@ class SenatorWithMembershipsSpider(scrapy.Spider):
 		'DataDesfiliacao': 'finishDate',				
 	}
 	senator_with_term_membership = {	
-		'CodigoMandato': 'rdfs:label',
+		'CodigoMandato': 'skos:prefLabel',
 		'UfParlamentar': 'natureza',
 		'NumeroLegislatura': 'legislatura', 
 		'DataInicio': 'startDate',
@@ -66,8 +66,8 @@ class SenatorWithMembershipsSpider(scrapy.Spider):
 
 	senator_mapping={
 	 	'CodigoParlamentar': 'skos:prefLabel',
-	 	'NomeCompletoParlamentar': 'rdfs:label',
-	 	'NomeParlamentar': 'rdfs:seeAlso',
+	 	'NomeCompletoParlamentar': 'foaf:name',
+	 	'NomeParlamentar': 'rdfs:label',
 		'terms': [],
 		'affiliations': [],
 	}
@@ -125,7 +125,7 @@ class SenatorWithMembershipsSpider(scrapy.Spider):
 					key= self.senator_mapping[descriptors_elem.tag]
 					info[key]= descriptors_elem.text
 			
-			info['resource_uri']= self.db_senators[info['rdfs:label']]											
+			info['agent_resource_uri']= self.db_senators[info['foaf:name']]											
 
 			#fills office terms as senator
 			info['terms']=[]
@@ -146,7 +146,7 @@ class SenatorWithMembershipsSpider(scrapy.Spider):
 								subterm[key]= subterm_elem.text												
 
 						subterm.update(term)
-						subterm['resource_uri']= str(uuid4())
+						subterm['membership_resource_uri']= str(uuid4())
 						subterm['role_resource_uri']= self.db_roles['Senador']
 						info['terms'].append(subterm)			
 
