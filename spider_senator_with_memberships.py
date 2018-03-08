@@ -86,7 +86,7 @@ class SenatorWithMembershipsSpider(scrapy.Spider):
 		# Senador uri's
 		df= pd.read_csv('resource_uri/senadores_resource_uri-55.csv', sep= ';', index_col=0)		
 		d= df['rdfs:label'].to_dict()		
-		self.db_senatores = {v:k for k,v in d.items()}		
+		self.db_senators = {v:k for k,v in d.items()}		
 
 		
 
@@ -125,7 +125,7 @@ class SenatorWithMembershipsSpider(scrapy.Spider):
 					key= self.senator_mapping[descriptors_elem.tag]
 					info[key]= descriptors_elem.text
 			
-			info['resource_uri']= self.db_senatores[info['rdfs:label']]											
+			info['resource_uri']= self.db_senators[info['rdfs:label']]											
 
 			#fills office terms as senator
 			info['terms']=[]

@@ -10,13 +10,16 @@
 
 	Scrapy running: scrapy runspider spider_tse_parties.py
 
-	Scrapy run + store: scrapy runspider spider_political_parties.py -o datasets/political_parties.json
+	Scrapy run + store: scrapy runspider spider_political_parties.py -o datasets/political_parties_with_president.json
 '''
 import scrapy
 import re 
+import pandas as pd
 
 from resource_uri.getters import get_party_uri_by_code
 from resource_uri.setters import set_party_resource_uri
+# Unique id without Network address
+from uuid import uuid4 
 stopwords=[
 	'\n'
 ]
@@ -39,15 +42,24 @@ class TsePoliticalPartiesSpider(scrapy.Spider):
 	5:'party_id'}
 
 	def __init__(self,  *args,**kwargs):
-			super(scrapy.Spider).__init__(*args,**kwargs)		
-			self.dbparties = get_party_uri_by_code()
+		super(scrapy.Spider).__init__(*args,**kwargs)		
+		self.db_parties = get_party_uri_by_code()
+
+		# Roles dictionary
+		d= pd.read_csv('resource_uri/role_resource_uri.csv', sep= ';', index_col=0).to_dict()['skos:prefLabel']
+		self.db_roles = {v:k for k,v in d.items()}		
+
+		# Senador uri's
+		df= pd.read_csv('resource_uri/senadores_resource_uri-55.csv', sep= ';', index_col=0)		
+		d= df['rdfs:label'].to_dict()		
+		self.db_senators = {v.upper():k for k,v in d.items()}		
 	
 	def parse(self, response): 
 		# tds = response.xpath('//tbody/tr//td[@class="tabelas"]')
 		tds = response.xpath('//tbody/tr//td')
 		ncols=6
 		this_party= {} 
-		# is_ready=False
+
 		for i, td in enumerate(tds):			
 			row = int(i / ncols)
 			col = i - row*ncols
@@ -57,47 +69,47 @@ class TsePoliticalPartiesSpider(scrapy.Spider):
 				field_name=self.column_fields[col]
 
 				# Due to weird formatting we must grab the first non-empty value				
-				value=formatter(values, field_name)				
+				value=self.formatter(values, field_name)				
 				this_party[field_name]= value
 
 				if field_name == 'party_code':
-					this_party['party_resource_uri']= self.dbparties[value]
-			
+					this_party['party_resource_uri']= self.db_parties[value]
+
 			if (col == ncols-1):
+				this_party['role_resource_uri']= self.db_roles['Presidente']
 				yield this_party
 				this_party={}
 
-def formatter(values, field_name):				
-	'''
-		Formats a raw text read from html element. 
-		Formats dates to CCYY-MM-DD 
-		INPUT:
-			values<list(str)>: a list of web texts should have one element only
+	def formatter(self, values, field_name):				
+		'''
+			Formats a raw text read from html element. 
+			Formats dates to CCYY-MM-DD 
+			INPUT:
+				values<list(str)>: a list of web texts should have one element only
 
-			field_name<str>: 	a str indicating the field name being read
+				field_name<str>: 	a str indicating the field name being read
 
-		OUTPUT:
-			result<str> the single string representing the formatted text
-	'''	
-	values=list(filter(lambda x : not(x in stopwords), values))
-	result=values[0] if len(values)>0 else None			
-	if not(result==None):
-		if field_name=='party_founding_date':			
-			regexp_date= re.sub(r'[^0-9|\.]', '', result) 
-			if regexp_date==None:
-				result=None 
-			else:
-				tmp= regexp_date.split('.')			
-				yyyy= int(tmp[-1])
-				m=int(tmp[1])
-				d=int(tmp[0])						
-			result= '%4d-%02d-%02d' % (yyyy,m,d)
+			OUTPUT:
+				result<str> the single string representing the formatted text
+		'''	
+		values=list(filter(lambda x : not(x in stopwords), values))
+		result=values[0] if len(values)>0 else None			
+		if not(result==None):
+			if field_name=='party_founding_date':			
+				regexp_date= re.sub(r'[^0-9|\.]', '', result) 
+				if regexp_date==None:
+					result=None 
+				else:
+					tmp= regexp_date.split('.')			
+					yyyy= int(tmp[-1])
+					m=int(tmp[1])
+					d=int(tmp[0])						
+				result= '%4d-%02d-%02d' % (yyyy,m,d)
 
-		if 	field_name=='party_presidency':
-			result= result.split(',')[0]
-			import code; code.interact(local=dict(globals(), **locals()))		
-
-	return result
+			if 	field_name=='party_presidency':				
+				result= result.split(',')[0]
+				result= self.db_senators.get(result, str(uuid4()))
+		return result
 
 
 
