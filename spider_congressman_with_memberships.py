@@ -58,11 +58,9 @@ class CongressmenAndPartyMembershipsSpider(scrapy.Spider):
 		'dataFiliacaoPartidoPosterior': 'startDate',		
 	}
 	congressman_with_term_membership = {	
-		'CodigoMandato': 'rdfs:label',
-		'UfParlamentar': 'natureza',
-		'NumeroLegislatura': 'legislatura', 
-		'DataInicio': 'startDate',
-		'DataFim': 'finishDate',				
+		'siglaUFRepresentacao': 'natureza',
+		'dataInicio': 'startDate',
+		'dataFim': 'finishDate',				
 	}
 
 	congressman_mapping={
@@ -93,6 +91,7 @@ class CongressmenAndPartyMembershipsSpider(scrapy.Spider):
 			self.parse_congressmen, 
 			headers= {'accept': 'application/json'}
 		)
+
 		yield req
 
 	def parse_congressmen(self, response): 
@@ -172,7 +171,6 @@ class CongressmenAndPartyMembershipsSpider(scrapy.Spider):
 						affiliation[key] = formatter_date(affiliation[key])
 
 
-
 				if info['affiliations']:		# has previous affiliation
 					affiliation['finishDate']=info['affiliations'][-1]['startDate'] 
 
@@ -188,120 +186,35 @@ class CongressmenAndPartyMembershipsSpider(scrapy.Spider):
 					current_affiliation=None		
 					info['affiliations'].append(affiliation)
 
-			# for term_elem in congressman_elem.findall('./filiacoesPartidarias/'):
-			# 	affiliation={}
-			# 	for tag, key in self.congressman_with_affiliation_membership.items(): 
-			# 		affiliation[key]= affiliation_elem.find('./{:}'.format(tag)).text # finds all keys
 
-			# 		#customizations  add party uri
-			# 		if key in ['sigla']: 
-			# 			affiliation['party_resource_uri'] = self.db_party_uri[affiliation[key]]
+			info['terms']=[]			
+			for term_elem in congressman_elem.findall('./periodosExercicio/'):				
+				term={}
+				for tag, key in self.congressman_with_term_membership.items(): 
+					term[key]= formatter(term_elem.find('./{:}'.format(tag)).text) # finds all keys
 
-			# 		if re.search('Date', key):
-			# 			affiliation[key] = formatter_date(affiliation[key])
+					if re.search('Date', key): 
+						if len(term[key])>0:
+							term[key] = formatter_date(term[key])
+						else:
+							term[key] = None
 
-
-
-			# 	if info['affiliations']:		# has previous affiliation
-			# 		affiliation['finishDate']=info['affiliations'][-1]['startDate'] 
-
-			# 	# adds membership_resource_uri
-			# 	affiliation['membership_resource_uri']=str(uuid4())
-			# 	affiliation['role_resource_uri']= self.db_roles['Afiliado']
+				# adds membership_resource_uri
+				term['membership_resource_uri']=str(uuid4())
+				term['role_resource_uri']= self.db_roles['Deputado']
 				
-			# 	if current_affiliation:
-			# 		if affiliation['sigla']==current_affiliation['sigla']: # update only the startDate
-			# 			info['affiliations'][-1]['startDate']= affiliation['startDate']
-			# 			current_affiliation=None		
-			# 	else:
-			# 		current_affiliation=None		
-			# 		info['affiliations'].append(affiliation)
+				info['terms'].append(term)
 
 
 			yield info
 				
 
-	def parsenode_draft_dates(self, root_draftperiods):							
-		'''
-			INPUT
-				root_draftperiods: root node to congress man's drafts
-
-			OUTPUT				
-				draft_date
-		'''			
-		draft_date= date(2099,1,1)
-		for subitem in root_draftperiods: #periodosExercicio
-			tags=[]
-			for subsubitem in subitem:
-				if subsubitem.tag == 'dataInicio':
-					this_date=datetime.strptime(subsubitem.text, '%d/%m/%Y').date()   
-					if this_date<=draft_date:
-						draft_date=this_date
-		return formatter_date(draft_date)
-
-	def parsenode_membership_transitions(self, root_memberships):
-		'''
-			INPUT
-				root_draftperiods: root node to congress man's drafts
-
-			OUTPUT				
-				list<dict<str,str>>: returns a list of memberships
-		'''				
-		memberships=[]
-		stop_fields=set(['previous_party_code','posterior_party_code','posterior_party_affiliation_date'])
-
-		for subitem in root_memberships: #filiacaoPartidaria
-			membership={}
-			for subsubitem in subitem:
-				if subsubitem.tag in self.congressman_mapping:
-					key=self.congressman_mapping[subsubitem.tag]
-					membership[key]=formatter(subsubitem.text) 						
-					
-				stop= (stop_fields == set(membership.keys()))
-				if stop: 
-					memberships.append(membership)
-					break
-
-		return memberships	
-
-	def output_congressman_membership(self, congressman, membership_transition, start_date, use_previous_party=False):				
-		congressman_membership={}
-
-		if use_previous_party:
-			party_code=membership_transition['previous_party_code']
-		else:
-			party_code=membership_transition['posterior_party_code']
-
-		finish_date=membership_transition['posterior_party_affiliation_date']	
-		finish_date=formatter_date(finish_date)
-		
-
-		congressman_membership['agent_resource_uri']=congressman['agent_resource_uri']
-		congressman_membership['test_agent_resource_uri']=congressman['test_agent_resource_uri']		
-		congressman_membership['party_code']=party_code
-		congressman_membership['party_resource_uri']=self.db_party_uri[party_code] if not(party_code=='SPART') else None 		
-		congressman_membership['start_date']=start_date
-		congressman_membership['finish_date']=finish_date
-
-		return congressman_membership
-
-
 def formatter(rawtext):
 	'''
 		Removes malformed characters
 	'''
-	return re.sub(r'[^A-Za-z0-9|\/| ]','',rawtext) 
+	return re.sub(r' ','', re.sub(r'\n','',rawtext))
 
-
-def formatter_party_resource_uri(partyid):
-	return 'object/' + partyid
-
-def formatter_agent_resource_uri(person_name, person_birthdate):
-	aryname=person_name.split(' ')
-	new_name='%s %s' % (aryname[0], aryname[-1])
-	yy= person_birthdate[-2:]
-	# c_m['test_agent_resource_uri']=set_person_resource_uri(new_name, congressman['birth_date'][-2:])	
-	return set_person_resource_uri(new_name, yy)	
 
 def formatter_date(this_date):
 	if isinstance(this_date, str):
