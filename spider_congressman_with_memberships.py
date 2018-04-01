@@ -85,12 +85,17 @@ class CongressmenAndPartyMembershipsSpider(scrapy.Spider):
 		'''
 			Stage 1: Request Get each congressmen for current term
 		'''
-		url = URL_OPEN_DATA_CAMARA_API_V1
-		url += 'ObterDeputados'
-		req = scrapy.Request(url, 
-			self.parse_congressmen, 
-			headers= {'accept': 'application/json'}
-		)
+		# url = URL_OPEN_DATA_CAMARA_API_V1
+		# url += 'ObterDeputados'
+		# req = scrapy.Request(url, 
+		# 	self.parse_congressmen, 
+		# 	headers= {'accept': 'application/json'}
+		# )		
+		req = scrapy.Request('http://www.camara.leg.br/SitCamaraWS/Deputados.asmx/ObterDetalhesDeputado?ideCadastro=74847&numLegislatura=', 
+			self.parse_congressman, 
+			headers= {'accept': 'application/json'},
+			meta={'registration_id': '74847'}				
+		)		
 
 		yield req
 
@@ -140,14 +145,19 @@ class CongressmenAndPartyMembershipsSpider(scrapy.Spider):
 		
 		info={}
 		info['skos:prefLabel']= str(registration_id)
-		for congressman_elem in root.findall('./'):
+		info['affiliations']=[]
+		info['terms']=[]			
+		
+		for i, congressman_elem in enumerate(root.findall('./Deputado')):
+			import code; code.interact(local=dict(globals(), **locals()))
 			#Person info
-			info['foaf:name']= str(congressman_elem.find('./nomeCivil').text)
-			info['rdfs:label']= str(congressman_elem.find('./nomeParlamentarAtual').text)
-			info['agent_resource_uri']= agent_resource_uri
+			if not('foaf:name' in info or 'rdfs:label' in info or 'agent_resource_uri' in info):
+				info['foaf:name']= str(congressman_elem.find('./nomeCivil').text)
+				info['rdfs:label']= str(congressman_elem.find('./nomeParlamentarAtual').text)
+				info['agent_resource_uri']= agent_resource_uri
 			
-			#Person Memberships:affiliations
-			info['affiliations']=[]
+			legislatura= congressman_elem.find('./numLegislatura').text
+			#Person Memberships:affiliations			
 			keys=self.congressman_with_affiliation_membership.values()
 			current_affiliation=dict(zip(
 				keys, [None]*len(keys))
@@ -157,7 +167,10 @@ class CongressmenAndPartyMembershipsSpider(scrapy.Spider):
 			current_affiliation['role_resource_uri']= self.db_roles['Afiliado']
 			current_affiliation['membership_resource_uri']= str(uuid4())
 
-			info['affiliations'].append(current_affiliation)			
+
+			if i==1: 
+				import code; code.interact(local=dict(globals(), **locals()))
+			info['affiliations'].append(current_affiliation)						
 			for affiliation_elem in congressman_elem.findall('./filiacoesPartidarias/'):
 				affiliation={}
 				for tag, key in self.congressman_with_affiliation_membership.items(): 
@@ -187,9 +200,10 @@ class CongressmenAndPartyMembershipsSpider(scrapy.Spider):
 					info['affiliations'].append(affiliation)
 
 
-			info['terms']=[]			
+			
 			for term_elem in congressman_elem.findall('./periodosExercicio/'):				
 				term={}
+				term['legislatura']= legislatura
 				for tag, key in self.congressman_with_term_membership.items(): 
 					term[key]= formatter(term_elem.find('./{:}'.format(tag)).text) # finds all keys
 
