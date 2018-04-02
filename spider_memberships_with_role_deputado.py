@@ -29,7 +29,7 @@ import pandas as pd
 import xml.etree.ElementTree as ET
 
 import re
-from collections import deque 
+# from collections import deque 
 #resource_uri generation and testing
 # from resource_uri.getters import get_congressmen_uri_by_apiid
 
@@ -41,12 +41,7 @@ POLARE_PREFIX = 'http://www.seliganapolitica.org/resource/'
 URL_OPEN_DATA_CAMARA_API_V1 = 'http://www.camara.leg.br/SitCamaraWS/Deputados.asmx/'
 
 
-IGNORE_TAGS = set(['numLegislatura', 'gabinete', 'comissoes',
-                   'partidoAtual', 'situacaoNaLegislaturaAtual',
-                   'periodosExercicio', 'filiacoesPartidarias',
-                   'historicoLider', 'historicoNomeParlamentar',
-                   'cargosComissoes', 'idParlamentarDeprecated',
-                   'ufRepresentacaoAtual'])
+IGNORE_TAGS = set([])
 
 
 class MembershipWithRoleDeputadoSpider(scrapy.Spider):
@@ -61,18 +56,18 @@ class MembershipWithRoleDeputadoSpider(scrapy.Spider):
     def __init__(self, legislatura=55, *args,**kwargs):
         super(scrapy.Spider).__init__(*args,**kwargs)
         
-        self.congressmen_d = get_congressmen(legislatura)
-        self.posts_d = deque(get_posts(legislatura), maxlen=315)
+        self.congressmen_d = get_congressmen(legislatura)        
         self.role    = get_role()
         self.parse_fn = lambda x: re.sub(r'\n| ', '', str(x))
         self.legislatura = 55
+        self.prefix = 'cam'
 
     def start_requests(self):
         '''
             Stage 1: Request Get each congressmen for current term
         '''
         for resource_idx, resource_uri in self.congressmen_d.items():
-            
+
             url = URL_OPEN_DATA_CAMARA_API_V1
             url = '{:}ObterDetalhesDeputado?ideCadastro='.format(url)
             url = '{:}{:}'.format(url, resource_idx)
@@ -80,15 +75,16 @@ class MembershipWithRoleDeputadoSpider(scrapy.Spider):
 
             req = scrapy.Request(
                 url,
-                self.parse_congressman,
+                self.parse_membership,
                 headers={'accept': 'application/json'},
-                meta={'resource_uri': resource_uri,
-                      'resource_idx': resource_idx}
+                meta={'org:hasMember': resource_uri,
+                      'resource_idx': resource_idx,
+                      'org:role': get_role()}
             )
 
             yield req
 
-    def parse_congressman(self, response):
+    def parse_membership(self, response):
         '''
             Paginates congressman xml
 
@@ -97,16 +93,26 @@ class MembershipWithRoleDeputadoSpider(scrapy.Spider):
 
         '''
         root = ET.fromstring(response.body_as_unicode())
-        registration_uri = response.meta['resource_uri']
+        orgdict = {key: response.meta[key]
+                   for key in response.meta if 'org:' in key}
 
-        
-        for deputados in root:            
-            for membership in deputados.find('./periodosExercicio'):                
+        for deputados in root:
+            for memberships in deputados.find('./periodosExercicio'):
+                result = dict(orgdict)
+                result['slp:resource_uri'] = str(uuid4())
                 for attr in memberships:
-                    import code; code.interact(local=dict(globals(), **locals()))
-                    
-                    
-        
+                    if attr.tag not in IGNORE_TAGS:
+                        key = '{:}:{:}'.format(self.prefix, attr.tag)
+                        value = self.parse_fn(attr.text)
+                        if (len(value) > 0):
+                            if 'data' in attr.tag:
+                                result[key] = date_format(value)
+                            else:
+                                result[key] = attr.text
+                        else:
+                            result[key] = None
+                yield result
+
 
 def get_congressmen(legislatura):
     file_path = 'datasets/deputados-{:}.csv'.format(legislatura)
@@ -115,14 +121,18 @@ def get_congressmen(legislatura):
     df = df['slp:resource_uri']
     return df.to_frame().to_dict()['slp:resource_uri']
 
-def get_posts(legislatura):
-    file_path = 'datasets/posts-{:}.csv'.format(legislatura)
-    with open(file_path, 'r') as f:
-        postsstr = f.read()
-    f.close()
-
-    return set(postsstr.split('\n')[1:])
 
 def get_role():
     # Deputado
     return 'b27beba7-ca02-4041-a9e0-1793bcd141fe'
+
+
+def date_format(txt):
+    result = txt
+    if len(txt) == 10:
+        yyyy = txt[6:]
+        mm = txt[3:5]
+        dd = txt[:2]
+
+        result = '{:}-{:}-{:}'.format(yyyy, mm, dd)
+    return result
