@@ -19,7 +19,7 @@
         scrapy runspider spider_memberships_with_role_deputado.py
 
     Scrapy run + store: 
-        scrapy runspider spider_membership_with_role_deputado.py -o datasets/memberships_with_role_deputado-55.json  -a legislatura=55
+        scrapy runspider spider_memberships_with_role_deputado.py -o datasets/memberships_with_role_deputado-55.json  -a legislatura=55
 
     updates:
         2018-03-08 updated to use XPaths
@@ -29,10 +29,6 @@ import pandas as pd
 import xml.etree.ElementTree as ET
 
 import re
-# from collections import deque 
-#resource_uri generation and testing
-# from resource_uri.getters import get_congressmen_uri_by_apiid
-
 
 # Unique id without Network address
 from uuid import uuid4
@@ -108,7 +104,7 @@ class MembershipWithRoleDeputadoSpider(scrapy.Spider):
                             if 'data' in attr.tag:
                                 result[key] = date_format(value)
                             else:
-                                result[key] = attr.text
+                                result[key] = text_format(attr.text)
                         else:
                             result[key] = None
                 yield result
@@ -136,3 +132,11 @@ def date_format(txt):
 
         result = '{:}-{:}-{:}'.format(yyyy, mm, dd)
     return result
+
+
+def text_format(txt):
+    '''
+        Formats before storing
+    '''
+    # Single spaces between words
+    return re.sub(r'  ', ' ', txt)

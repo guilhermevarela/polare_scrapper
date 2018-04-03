@@ -128,7 +128,15 @@ class CongressmenWithLegislaturaSpider(scrapy.Spider):
                             dd = deputado.text[:2]
                             _info[key] = '{:}-{:}-{:}'.format(yyyy, mm, dd)
                         else:
-                            _info[key] = deputado.text
+                            _info[key] = text_format(deputado.text)
                     else:
                         _info[key] = None
         yield _info
+
+
+def text_format(txt):
+    '''
+        Formats before storing
+    '''
+    # Single spaces between words
+    return re.sub(r'  ', ' ', txt)
