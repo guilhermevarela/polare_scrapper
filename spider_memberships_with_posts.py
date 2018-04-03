@@ -26,7 +26,7 @@ import pandas as pd
 import re
 from collections import deque
 #resource_uri generation and testing
-from resource_uri.getters import get_congressmen_uri_by_apiid
+from resource_uri.getters import get_congressmen
 
 
 # Unique id without Network address

@@ -16,7 +16,7 @@ import scrapy
 import re 
 import pandas as pd
 
-from resource_uri.getters import get_party_uri_by_code
+from resource_uri.getters import get_party
 from resource_uri.setters import set_party_resource_uri
 # Unique id without Network address
 from uuid import uuid4 
@@ -43,7 +43,7 @@ class TsePoliticalPartiesSpider(scrapy.Spider):
 
 	def __init__(self,  *args,**kwargs):
 		super(scrapy.Spider).__init__(*args,**kwargs)		
-		self.db_parties = get_party_uri_by_code()
+		self.db_parties = get_party()
 
 		# Roles dictionary
 		d= pd.read_csv('resource_uri/role_resource_uri.csv', sep= ';', index_col=0).to_dict()['skos:prefLabel']

@@ -30,7 +30,7 @@ import pandas as pd
 import numpy as np 
 
 #resource_uri generation and testing
-from resource_uri.getters import get_congressmen_uri_by_apiid, get_party_uri_by_code
+from resource_uri.getters import get_congressmen, get_party
 from resource_uri.setters import set_person_resource_uri
 
 # Unique id without Network address

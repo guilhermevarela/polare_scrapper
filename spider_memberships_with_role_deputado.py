@@ -52,9 +52,8 @@ class MembershipWithRoleDeputadoSpider(scrapy.Spider):
     def __init__(self, legislatura=55, *args,**kwargs):
         super(scrapy.Spider).__init__(*args,**kwargs)
         
-        self.congressmen_d = get_congressmen(legislatura)        
+        self.congressmen_d = get_congressmen(legislatura)
         self.role    = get_role()
-        self.parse_fn = lambda x: re.sub(r'\n| ', '', str(x))
         self.legislatura = 55
         self.prefix = 'cam'
 
@@ -99,7 +98,7 @@ class MembershipWithRoleDeputadoSpider(scrapy.Spider):
                 for attr in memberships:
                     if attr.tag not in IGNORE_TAGS:
                         key = '{:}:{:}'.format(self.prefix, attr.tag)
-                        value = self.parse_fn(attr.text)
+                        value = aux.parse_fn(attr.text)
                         if (len(value) > 0):
                             if 'data' in attr.tag:
                                 result[key] = date_format(value)

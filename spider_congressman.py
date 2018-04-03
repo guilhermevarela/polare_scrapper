@@ -12,14 +12,14 @@
     3. Within details gets current membership and membershipHistory
 
 
-    Scrapy shell: 
+    Scrapy shell:
         scrapy shell 'http://www.camara.leg.br/SitCamaraWS/Deputados.asmx/ObterDetalhesDeputado?ideCadastro=160518&numLegislatura=55'
 
-    Scrapy running: 
+    Scrapy running:
         scrapy runspider spider_congressman.py
 
-    Scrapy run + store: 
-        scrapy runspider spider_congressman.py -o datasets/congressmen-55.json  -a legislatura=55
+    Scrapy run + store:
+        scrapy runspider spider_congressman.py -o datasets/camara/json/congressmen-55.json  -a legislatura=55
 
     updates:
         2018-03-08 updated to use XPaths
@@ -28,11 +28,7 @@ import scrapy
 
 import xml.etree.ElementTree as ET
 
-import re
-
-#resource_uri generation and testing
-from resource_uri.getters import get_congressmen_uri_by_apiid
-
+import aux
 
 # Unique id without Network address
 from uuid import uuid4
@@ -53,15 +49,14 @@ class CongressmenWithLegislaturaSpider(scrapy.Spider):
     name = 'congressman_with_legislatura'
 
 
-    # Overwrites default:ASCII
+    # Overwrites default: ASCII
     custom_settings = {
         'FEED_EXPORT_ENCODING': 'utf-8'
     }
 
     def __init__(self, legislatura=55, *args,**kwargs):
         super(scrapy.Spider).__init__(*args,**kwargs)
-        self.db_congressmen_uri = get_congressmen_uri_by_apiid()
-        self.parse_fn = lambda x: re.sub(r'\n| ', '', str(x))
+        self.db_congressmen_uri = aux.get_congressmen()
         self.legislatura = 55
 
     def start_requests(self):
@@ -120,7 +115,7 @@ class CongressmenWithLegislaturaSpider(scrapy.Spider):
                 # for attr in deputado:
                 if deputado.tag not in IGNORE_TAGS:
                     key = 'cam:{:}'.format(deputado.tag)
-                    value = self.parse_fn(deputado.text)
+                    value = aux.parse_fn(deputado.text)
                     if (len(value) > 0):
                         if 'data' in deputado.tag:
                             yyyy = deputado.text[6:]
@@ -128,15 +123,7 @@ class CongressmenWithLegislaturaSpider(scrapy.Spider):
                             dd = deputado.text[:2]
                             _info[key] = '{:}-{:}-{:}'.format(yyyy, mm, dd)
                         else:
-                            _info[key] = text_format(deputado.text)
+                            _info[key] = aux.text_format(deputado.text)
                     else:
                         _info[key] = None
         yield _info
-
-
-def text_format(txt):
-    '''
-        Formats before storing
-    '''
-    # Single spaces between words
-    return re.sub(r'  ', ' ', txt)

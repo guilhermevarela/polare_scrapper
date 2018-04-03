@@ -9,7 +9,7 @@
 '''
 import pandas as pd 
 
-def get_congressmen_uri_by_apiid():
+def get_congressmen():
 	'''
 		Provides a dictionary with keys being api ids 
 		OUTPUT
@@ -21,7 +21,7 @@ def get_congressmen_uri_by_apiid():
 
 	return result
 
-def get_party_uri_by_code():
+def get_party():
 	'''
 		Provides a dictionary with keys being api ids 
 		OUTPUT

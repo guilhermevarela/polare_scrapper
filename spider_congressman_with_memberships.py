@@ -33,7 +33,7 @@ import pandas as pd
 import numpy as np 
 
 #resource_uri generation and testing
-from resource_uri.getters import get_congressmen_uri_by_apiid, get_party_uri_by_code
+from resource_uri.getters import get_congressmen, get_party
 from resource_uri.setters import set_person_resource_uri
 
 # Unique id without Network address
@@ -72,8 +72,8 @@ class CongressmenAndPartyMembershipsSpider(scrapy.Spider):
 	}
 	def __init__(self, legislatura= 55, *args,**kwargs):
 		super(scrapy.Spider).__init__(*args,**kwargs)				
-		self.db_congressmen_uri = get_congressmen_uri_by_apiid()
-		self.db_party_uri= get_party_uri_by_code()
+		self.db_congressmen_uri = get_congressmen()
+		self.db_party_uri= get_party()
 		# self.congressmen={} # use registration id as key
 	
 		# Roles dictionary
