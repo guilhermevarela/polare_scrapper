@@ -66,14 +66,31 @@ class CongressmenWithLegislaturaSpider(scrapy.Spider):
 
     def start_requests(self):
         '''
-            Stage 1: Request Get each congressmen for current term
+            Querying every congressmen during term (legislatura)
         '''
-        for resource_idx, resource_uri in self.db_congressmen_uri.items():
+        url = URL_OPEN_DATA_CAMARA_API_V1
+        url = '{:}ObterDeputados?numLegislatura={:}'.format(url, self.legislatura)
+        req = scrapy.Request(
+            url,
+            self.request_congressman,
+            headers={'accept': 'application/json'}
+        )
+        yield req
+
+    def request_congressman(self, response):
+        '''
+           Start by querying every congressmen during term (legislatura)
+
+        '''
+        root = ET.fromstring(response.body_as_unicode())
+        for deputado in root:
+            resource_idx = int(deputado.find('ideCadastro').text)
             url = URL_OPEN_DATA_CAMARA_API_V1
             url = '{:}ObterDetalhesDeputado?ideCadastro='.format(url)
             url = '{:}{:}'.format(url, resource_idx)
             url = '{:}&numLegislatura={:}'.format(url, self.legislatura)
 
+            resource_uri = self.db_congressmen_uri.get(resource_idx, None)
             req = scrapy.Request(
                 url,
                 self.parse_congressman,
@@ -81,7 +98,6 @@ class CongressmenWithLegislaturaSpider(scrapy.Spider):
                 meta={'resource_uri': resource_uri,
                       'resource_idx': resource_idx}
             )
-
             yield req
 
     def parse_congressman(self, response):
