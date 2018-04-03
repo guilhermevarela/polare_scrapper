@@ -19,17 +19,16 @@
         scrapy runspider spider_memberships_with_role_deputado.py
 
     Scrapy run + store: 
-        scrapy runspider spider_memberships_with_role_deputado.py -o datasets/camara/json/memberships_with_role_deputado-55.json  -a legislatura=55
+        scrapy runspider spider_memberships_with_role_deputado.py -o datasets/memberships_with_role_deputado-55.json  -a legislatura=55
 
     updates:
         2018-03-08 updated to use XPaths
 '''
 import scrapy
-import json
+import pandas as pd
 import xml.etree.ElementTree as ET
 
 import re
-import aux
 
 # Unique id without Network address
 from uuid import uuid4
@@ -52,7 +51,7 @@ class MembershipWithRoleDeputadoSpider(scrapy.Spider):
 
     def __init__(self, legislatura=55, *args,**kwargs):
         super(scrapy.Spider).__init__(*args,**kwargs)
-
+        
         self.congressmen_d = get_congressmen(legislatura)
         self.role    = get_role()
         self.legislatura = 55
@@ -102,27 +101,41 @@ class MembershipWithRoleDeputadoSpider(scrapy.Spider):
                         value = aux.parse_fn(attr.text)
                         if (len(value) > 0):
                             if 'data' in attr.tag:
-                                result[key] = aux.date_format(value)
+                                result[key] = date_format(value)
                             else:
-                                result[key] = aux.text_format(attr.text)
+                                result[key] = text_format(attr.text)
                         else:
                             result[key] = None
                 yield result
 
 
 def get_congressmen(legislatura):
-    file_path = 'datasets/camara2/json/congressmen-{:}.json'.format(legislatura)
-
-    with open(file_path, 'r') as f:
-        congressmenstr = f.read()
-    f.close()
-
-    congressmen = json.loads(congressmenstr)
-
-    return {d['cam2:id']:d['slp:resource_uri']
-            for d in congressmen}
+    file_path = 'datasets/deputados-{:}.csv'.format(legislatura)
+    df = pd.read_csv(file_path, sep=';', index_col=None)
+    df = df.set_index('cam:ideCadastro')
+    df = df['slp:resource_uri']
+    return df.to_frame().to_dict()['slp:resource_uri']
 
 
 def get_role():
     # Deputado
     return 'b27beba7-ca02-4041-a9e0-1793bcd141fe'
+
+
+def date_format(txt):
+    result = txt
+    if len(txt) == 10:
+        yyyy = txt[6:]
+        mm = txt[3:5]
+        dd = txt[:2]
+
+        result = '{:}-{:}-{:}'.format(yyyy, mm, dd)
+    return result
+
+
+def text_format(txt):
+    '''
+        Formats before storing
+    '''
+    # Single spaces between words
+    return re.sub(r'  ', ' ', txt)

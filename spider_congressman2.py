@@ -26,7 +26,7 @@
 '''
 import scrapy
 
-import json 
+import json
 
 import aux
 
@@ -37,12 +37,7 @@ POLARE_PREFIX = 'http://www.seliganapolitica.org/resource/'
 URL_OPEN_DATA_CAMARA_API_V2 = 'https://dadosabertos.camara.leg.br/api/v2/deputados'
 
 
-IGNORE_TAGS = set(['numLegislatura', 'gabinete', 'comissoes',
-                   'partidoAtual', 'situacaoNaLegislaturaAtual',
-                   'periodosExercicio', 'filiacoesPartidarias',
-                   'historicoLider', 'historicoNomeParlamentar',
-                   'cargosComissoes', 'idParlamentarDeprecated',
-                   'ufRepresentacaoAtual'])
+IGNORE_TAGS = set(['ultimoStatus', 'situacao', 'urlWebsite'])
 
 
 class CongressmenWithLegislaturaSpider(scrapy.Spider):
@@ -78,21 +73,15 @@ class CongressmenWithLegislaturaSpider(scrapy.Spider):
            Start by querying every congressmen during term (legislatura)
 
         '''
-        import code; code.interact(local=dict(globals(), **locals()))
         body = json.loads(response.body_as_unicode())
         data = body['dados']
         links = body['links']
 
-        # root = ET.fromstring(response.body_as_unicode())
-        for deputado in root:
-
-            resource_idx = int(deputado.find('ideCadastro').text)
-            url = URL_OPEN_DATA_CAMARA_API_V2
-            url = '{:}ObterDetalhesDeputado?ideCadastro='.format(url)
-            url = '{:}{:}'.format(url, resource_idx)
-            url = '{:}&numLegislatura={:}'.format(url, self.legislatura)
-
+        for congressman in data:
+            resource_idx = int(congressman['id'])
+            url = congressman['uri']
             resource_uri = self.db_congressmen_uri.get(resource_idx, None)
+
             req = scrapy.Request(
                 url,
                 self.parse_congressman,
@@ -104,13 +93,14 @@ class CongressmenWithLegislaturaSpider(scrapy.Spider):
 
         # Next page
         for link in links:
-            if 'next' in link:
-                req = scrapy.Request(
-                    link['href'],
-                    self.request_congressman,
-                    headers={'accept': 'application/json'}
-                )
-                yield req
+            if (link['rel'] == 'next'):
+                if link['href']:
+                    req = scrapy.Request(
+                        link['href'],
+                        self.request_congressman,
+                        headers={'accept': 'application/json'}
+                    )
+                    yield req
 
     def parse_congressman(self, response):
         '''
@@ -120,27 +110,18 @@ class CongressmenWithLegislaturaSpider(scrapy.Spider):
                 http://www.camara.leg.br/SitCamaraWS/Deputados.asmx/ObterDetalhesDeputado?ideCadastro=160518&numLegislatura=55
 
         '''
-        root = ET.fromstring(response.body_as_unicode())
+        body = json.loads(response.body_as_unicode())
+        data = body['dados']
+        links = body['links']
         registration_uri = response.meta['resource_uri']
 
         _info = {}
         _info['slp:old_resource_uri'] = registration_uri
         _info['slp:resource_uri'] = str(uuid4())
 
-        for deputados in root:
-            for deputado in deputados:
-                # for attr in deputado:
-                if deputado.tag not in IGNORE_TAGS:
-                    key = 'cam2:{:}'.format(deputado.tag)
-                    value = aux.parse_fn(deputado.text)
-                    if (len(value) > 0):
-                        if 'data' in deputado.tag:
-                            yyyy = deputado.text[6:]
-                            mm = deputado.text[3:5]
-                            dd = deputado.text[:2]
-                            _info[key] = '{:}-{:}-{:}'.format(yyyy, mm, dd)
-                        else:
-                            _info[key] = aux.text_format(deputado.text)
-                    else:
-                        _info[key] = None
+        for attr in data:
+            if attr not in IGNORE_TAGS:
+                key = 'cam2:{:}'.format(attr)
+                _info[key] = aux.text_format(data[attr])
+
         yield _info

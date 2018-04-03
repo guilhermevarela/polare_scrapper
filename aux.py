@@ -8,13 +8,22 @@
 import re
 import pandas as pd
 
+def date_format(txt):
+    result = txt
+    if len(txt) == 10:
+        yyyy = txt[6:]
+        mm = txt[3:5]
+        dd = txt[:2]
+
+        result = '{:}-{:}-{:}'.format(yyyy, mm, dd)
+    return result
 
 def text_format(txt):
     '''
         Formats before storing
     '''
     # Single spaces between words
-    return re.sub(r'  ', ' ', txt)
+    return re.sub(r'  ', ' ', str(txt))
 
 def parse_fn(txt):
     return re.sub(r'\n| ', '', str(txt))
