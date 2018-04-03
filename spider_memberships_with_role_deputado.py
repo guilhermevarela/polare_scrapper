@@ -16,10 +16,10 @@
         scrapy shell 'http://www.camara.leg.br/SitCamaraWS/Deputados.asmx/ObterDetalhesDeputado?ideCadastro=160518&numLegislatura=55'
 
     Scrapy running: 
-        scrapy runspider spider_congressman.py
+        scrapy runspider spider_memberships_with_role_deputado.py
 
     Scrapy run + store: 
-        scrapy runspider spider_congressman.py -o datasets/congressmen-55.json  -a legislatura=55
+        scrapy runspider spider_membership_with_role_deputado.py -o datasets/memberships_with_role_deputado-55.json  -a legislatura=55
 
     updates:
         2018-03-08 updated to use XPaths
