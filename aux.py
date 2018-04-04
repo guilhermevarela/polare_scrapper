@@ -32,7 +32,7 @@ def parse_fn(txt):
     return re.sub(r'\n| ', '', str(txt))
 
 
-def get_congressmen():
+def get_congressmen(deprecated=False):
     '''
         Provides a dictionary with keys being api ids 
         OUTPUT
@@ -40,8 +40,11 @@ def get_congressmen():
                 key: ideCadastro api v1 camara
                 value: resource uri
     '''
-    result = get_resource('person_resource_uri.csv', 'ideCadastro', 'resource_uri')
-
+    if deprecated:
+        result = get_resource('deprecated/person_resource_uri.csv', 'ideCadastro', 'resource_uri')
+    else:
+        # congressmen-cam-55.csv
+        result = get_resource('slp/agents/congressmen-cam-55.csv', 'cam:ideCadastro', 'slp:resource_uri')
     return result
 
 
@@ -53,7 +56,14 @@ def get_party():
                 key: ideCadastro api v1 camara
                 value: resource uri
     '''
-    result = get_resource('party_resource_uri.csv', 'Sigla', 'party_resource_uri')
+    result = get_resource('slp/organizations/parties.csv', 'sigla', 'slp:resource_uri')
+
+    return result
+
+
+def get_role():
+
+    result = get_resource('slp/roles.csv', 'skos:prefLabel', 'slp:resource_uri')
 
     return result
 
@@ -72,7 +82,7 @@ def get_resource(table, key_column, resource_uri_column):
             dict<key<int>,polare_resource_uri<string>>: dictionary
     '''
     #Current dir will be where the spiders are
-    resource_path = 'datasets/previous/' + table
+    resource_path = 'datasets/' + table
     df = pd.read_csv(resource_path, sep=';', index_col=None, header=0, encoding='utf-8')
     result = {
         key:value
