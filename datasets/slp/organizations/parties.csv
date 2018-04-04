@@ -1,4 +1,4 @@
-sigla;Nome;party_resource_uri
+sigla;rdfs:label;slp:resource_uri
 PEN;Partido Ecológico Nacional;7b1a2ee4-df61-11e7-a2f6-c82a144c0a85
 PPL;Partido Pátria Livre;7b20e3f6-df61-11e7-885c-c82a144c0a85
 PROS;Partido Republicano da Ordem Social;7b20e63a-df61-11e7-b49c-c82a144c0a85
