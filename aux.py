@@ -8,6 +8,7 @@
 import re
 import pandas as pd
 
+
 def date_format(txt):
     result = txt
     if len(txt) == 10:
@@ -18,6 +19,7 @@ def date_format(txt):
         result = '{:}-{:}-{:}'.format(yyyy, mm, dd)
     return result
 
+
 def text_format(txt):
     '''
         Formats before storing
@@ -25,8 +27,10 @@ def text_format(txt):
     # Single spaces between words
     return re.sub(r'  ', ' ', str(txt))
 
+
 def parse_fn(txt):
     return re.sub(r'\n| ', '', str(txt))
+
 
 def get_congressmen():
     '''
@@ -40,6 +44,7 @@ def get_congressmen():
 
     return result
 
+
 def get_party():
     '''
         Provides a dictionary with keys being api ids 
@@ -51,6 +56,7 @@ def get_party():
     result = get_resource('party_resource_uri.csv', 'Sigla', 'party_resource_uri')
 
     return result
+
 
 def get_resource(table, key_column, resource_uri_column):
     '''
