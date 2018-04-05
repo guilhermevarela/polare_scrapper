@@ -17,7 +17,8 @@
 
     Scrapy running: scrapy runspider spider_congressman_with_memberships.py
 
-    Scrapy run + store: scrapy runspider spider_congressman_with_memberships.py -o datasets/camara/congressman_with_memberships-55.json  -a legislatura=55
+    Scrapy run + store: 
+        scrapy runspider spider_congressman_with_memberships.py -o datasets/camara/congressman_with_memberships-55.json  -a legislatura=55
 
     updates:
         2018-03-08 updated to use XPaths
@@ -31,7 +32,8 @@ import xml.etree.ElementTree as ET
 
 # import pandas as pd
 import json
-from aux import get_congressmen, get_party, get_role
+import aux
+# from aux import get_congressmen, get_party, get_role
 #resource_uri generation and testing
 # from resource_uri.getters import get_congressmen, get_party
 # from resource_uri.setters import set_person_resource_uri
@@ -44,7 +46,9 @@ POLARE_PREFIX='http://www.seliganapolitica.org/resource/'
 URL_OPEN_DATA_CAMARA_API_V1= 'http://www.camara.leg.br/SitCamaraWS/Deputados.asmx/'
 URL_OPEN_DATA_CAMARA_API_V2 = 'https://dadosabertos.camara.leg.br/api/v2/deputados'
 
-
+# FILTER_TAGS_CONGRESSMAN = set(['numLegislatura', 'email', 'data'])
+IGNORE_TAGS_TERMS = set(['idCadastroParlamentarAnterior'])
+IGNORE_TAGS_AFFILIATIONS = set([])
 
 class CongressmanWithMembershipsSpider(scrapy.Spider):
     name= 'congressman_with_memberships'
@@ -55,32 +59,37 @@ class CongressmanWithMembershipsSpider(scrapy.Spider):
         'FEED_EXPORT_ENCODING': 'utf-8' 
     }
 
-    congressman_with_affiliation_membership = {
-        'idPartidoPosterior': 'cam:sigla',
-        'dataFiliacaoPartidoPosterior': 'cam:startDate',
-    }
-    congressman_with_term_membership = {
-        'siglaUFRepresentacao': 'cam:siglaUFRepresentacao',
-        'dataInicio': 'cam:startDate',
-        'dataFim': 'cam:finishDate',
-    }
+    congressman_with_affiliation_membership = set([
+        'idPartidoAnterior', 'siglaPartidoAnterior',
+        'nomePartidoAnterior', 'idPartidoPosterior',
+        'siglaPartidoPosterior', 'nomePartidoPosterior',
+        'dataFiliacaoPartidoPosterior'])
 
-    congressman_mapping={
-        'ideCadastro': 'cam:ideCadastro',
-        'nomeCivil': 'cam:nomeCivil',
-        'nomeParlamentarAtual': 'cam:nomeParlamentarAtual',
-        'terms': [],
-        'affiliations': [],
-    }
+    congressman_with_term_membership = set([
+        'siglaUFRepresentacao', 'descricaoCausaFimExercicio',
+        'dataInicio','dataFim'])
+
+    # congressman_mapping = {
+    #     'ideCadastro': 'cam:ideCadastro',
+    #     'nomeCivil': 'cam:nomeCivil',
+    #     'nomeParlamentarAtual': 'cam:nomeParlamentarAtual',
+    #     'dataNascimento': 'cam:dataNascimento',
+    #     'dataFalecimento': 'cam:dataFalecimento'
+    # }
+    congressman_mapping = set([
+        'ideCadastro', 'nomeCivil', 'nomeParlamentarAtual',
+        'dataNascimento', 'dataFalecimento'])
+
     def __init__(self, legislatura= 55, *args,**kwargs):
         super(scrapy.Spider).__init__(*args,**kwargs)
-        self.old_congressmen = get_congressmen(deprecated=True)
-        self.congressmen = get_congressmen()
-        self.parties = get_party()
-    
+        self.old_congressmen = aux.get_congressmen(deprecated=True)
+        self.congressmen = aux.get_congressmen()
+        self.parties = aux.get_party()
+
         # Roles dictionary
-        self.roles = get_role()
+        self.roles = aux.get_role()
         self.legislatura = legislatura
+        self.prefix = 'cam'
 
     def start_requests(self):
         '''
@@ -95,7 +104,7 @@ class CongressmanWithMembershipsSpider(scrapy.Spider):
             headers={'accept': 'application/json'}
         )
         yield req
-    
+
     def request_congressman(self, response):
         '''
            Start by querying every congressmen during term (legislatura)
@@ -107,8 +116,11 @@ class CongressmanWithMembershipsSpider(scrapy.Spider):
 
         for congressman in data:
             resource_idx = int(congressman['id'])
-            url = congressman['uri']
-            resource_uri = self.congressmen.get(resource_idx, None)
+            url = URL_OPEN_DATA_CAMARA_API_V1
+            url = '{:}ObterDetalhesDeputado?ideCadastro='.format(url)
+            url = '{:}{:}'.format(url, resource_idx)
+            url = '{:}&numLegislatura={:}'.format(url, self.legislatura)
+            resource_uri = self.congressmen.get(resource_idx, str(uuid4()))
 
             req = scrapy.Request(
                 url,
@@ -142,13 +154,26 @@ class CongressmanWithMembershipsSpider(scrapy.Spider):
         orgdict = {key: response.meta[key]
                    for key in response.meta if 'org:' in key}
 
+        outputs = {} 
         for deputados in root:
-            import code; code.interact(local=dict(globals(), **locals()))
-            for memberships in deputados.find('./periodosExercicio'):
+            # import code; code.interact(local=dict(globals(), **locals()))
+            for attr in deputados:
+                if attr.tag in self.congressman_mapping:
+                    key = '{:}:{:}'.format(self.prefix, attr.tag)
+                    value = aux.parse_fn(attr.text)
+                    if (len(value) > 0):
+                        if 'data' in attr.tag:
+                            outputs[key] = aux.date_format(value)
+                        else:
+                            outputs[key] = aux.text_format(attr.text)
+                    else:
+                        outputs[key] = None
+            terms = []
+            for term in deputados.find('./periodosExercicio'):
                 result = dict(orgdict)
                 result['slp:resource_uri'] = str(uuid4())
-                for attr in memberships:
-                    if attr.tag not in IGNORE_TAGS:
+                for attr in term:
+                    if attr.tag in self.congressman_with_term_membership:
                         key = '{:}:{:}'.format(self.prefix, attr.tag)
                         value = aux.parse_fn(attr.text)
                         if (len(value) > 0):
@@ -158,7 +183,58 @@ class CongressmanWithMembershipsSpider(scrapy.Spider):
                                 result[key] = aux.text_format(attr.text)
                         else:
                             result[key] = None
-                yield result               
+                terms.append(result)
+            outputs['terms'] = terms
+            
+            affiliations = []
+            for affiliation in deputados.find('./filiacoesPartidarias'):
+                result = dict(orgdict)
+                result['slp:resource_uri'] = str(uuid4())
+                for attr in affiliation:
+                    if attr.tag in self.congressman_with_affiliation_membership:
+                        key = '{:}:{:}'.format(self.prefix, attr.tag)
+                        value = aux.parse_fn(attr.text)
+                        if (len(value) > 0):
+                            if 'data' in attr.tag:
+                                result[key] = aux.date_format(value)
+                            else:
+                                result[key] = aux.text_format(attr.text)
+                        else:
+                            result[key] = None
+                if affiliations:
+                    affiliations[-1]['cam:finishDate'] = result['cam:dataFiliacaoPartidoPosterior']
+                else:    
+                    affiliation_0 = {
+                        'slp:resource_uri': str(uuid4()),
+                        'cam:sigla': result['cam:siglaPartidoAnterior'],
+                        'cam:startDate': None,
+                        'cam:finishDate': result['cam:dataFiliacaoPartidoPosterior'],
+                        'org:role': self.roles['Afiliado'],
+                    }
+                    affiliations.append(affiliation_0)
+
+                affiliation_0 = {
+                    'slp:resource_uri': str(uuid4()),
+                    'cam:sigla': result['cam:siglaPartidoPosterior'],
+                    'cam:startDate': result['cam:dataFiliacaoPartidoPosterior'],
+                    'cam:finishDate': None,
+                    'org:role': self.roles['Afiliado']
+                }
+                affiliations.append(affiliation_0)
+
+            if affiliations:
+                outputs['affiliations'] = affiliations
+            else:
+                id_partido = deputados.find('./partidoAtual/idPartido')
+                outputs['affiliations'] = [{
+                    'slp:resource_uri': str(uuid4()),
+                    'cam:sigla': id_partido.text,
+                    'cam:startDate': None,
+                    'cam:finishDate': None,
+                    'org:role': self.roles['Afiliado'],
+                }]
+
+        yield outputs
 
     # def parse_congressmen(self, response): 
     #     '''
@@ -279,22 +355,22 @@ class CongressmanWithMembershipsSpider(scrapy.Spider):
     #         yield info
                 
 
-def formatter(rawtext):
-    '''
-        Removes malformed characters
-    '''
-    return re.sub(r' ','', re.sub(r'\n','',rawtext))
+# def formatter(rawtext):
+#     '''
+#         Removes malformed characters
+#     '''
+#     return re.sub(r' ','', re.sub(r'\n','',rawtext))
 
 
-def formatter_date(this_date):
-    if isinstance(this_date, str):
-        return this_date[-4:] + '-' + this_date[3:5] + '-' + this_date[0:2]
-    else:
-        return this_date.strftime('%Y-%m-%d')
+# def formatter_date(this_date):
+#     if isinstance(this_date, str):
+#         return this_date[-4:] + '-' + this_date[3:5] + '-' + this_date[0:2]
+#     else:
+#         return this_date.strftime('%Y-%m-%d')
 
 
-def congressman_api_v1_uri(registration_id, legislatura_id=55):
-    uri= URL_OPEN_DATA_CAMARA_API_V1
-    uri+='ObterDetalhesDeputado?ideCadastro={:}'.format(registration_id)
-    uri+='&numLegislatura={:}'.format(legislatura_id)
-    return uri
+# def congressman_api_v1_uri(registration_id, legislatura_id=55):
+#     uri= URL_OPEN_DATA_CAMARA_API_V1
+#     uri+='ObterDetalhesDeputado?ideCadastro={:}'.format(registration_id)
+#     uri+='&numLegislatura={:}'.format(legislatura_id)
+#     return uri
