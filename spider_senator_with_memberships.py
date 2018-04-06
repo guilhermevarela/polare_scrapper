@@ -17,7 +17,7 @@
 
 	Scrapy running: scrapy runspider spider_senator_with_memberships.py
 
-	Scrapy run + store: scrapy runspider spider_senator_with_memberships.py -o datasets/senator_with_memberships-55_56.json -a legislatura=55
+	Scrapy run + store: scrapy runspider spider_senator_with_memberships.py -o datasets/sen/json/senator_with_memberships-55_56.json -a legislatura=55
 '''
 from datetime import datetime
 from datetime import date 
