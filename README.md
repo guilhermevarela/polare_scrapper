@@ -12,10 +12,6 @@ This is step by step guide to Political Entities import processes.
 
 ## 2. The Project
 
-API uses the flask_manager as a project management utility.
-The project structure follows the conventions implied by the flask_manager.
-Additionally we have added some packages to the API project.
-
 The following defines the current project structure tree:
 
 ```
