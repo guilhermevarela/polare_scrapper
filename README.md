@@ -3,9 +3,9 @@
 This is step by step guide to Political Entities import processes.
 ## 1. Pipeline Overview
 * Install dependencies
-* Scrap congressmen
-* Scrap senators
-* Scrap parties
+* [Scrap congressmen](http://www2.camara.leg.br/transparencia/dados-abertos/dados-abertos-legislativo)
+* [Scrap senators](https://www12.senado.leg.br/dados-abertos)
+* [Scrap parties](http://www.tse.jus.br/partidos/partidos-politicos/registrados-no-tse)
 * Run Congressman notebook
 * Run Senator notebook
 * Consolidate imports
@@ -24,7 +24,7 @@ The following defines the current project structure tree:
             - agents/
             - memberships/
             - organizations/
-            - posts/
+            - vote_events/
         - tse
     - aux.py    
     - Congressmen.ipynb
