@@ -30,9 +30,9 @@ import pandas as pd
 import numpy as np 
 
 #resource_uri generation and testing
-from resource_uri.getters import get_congressmen, get_party
-from resource_uri.setters import set_person_resource_uri
-
+# from resource_uri.getters import get_congressmen, get_party
+# from resource_uri.setters import set_person_resource_uri
+ 
 # Unique id without Network address
 from uuid import uuid4 
 
@@ -42,7 +42,7 @@ URL_OPEN_DATA_SENADO_API_V1= 'http://legis.senado.leg.br/dadosabertos/senador/'
 
 SENATOR_URI = 'd57a29ff-c69a-4b32-b98a-3dd8f204c0a3'
 SENADO_URI = '81311052-e5b6-46fe-87ba-83865fa0ffb0'
-
+AFFILIATE_URI = '6a688541-b16a-45ca-8aa9-fa700373279f'
 
 class SenatorWithMembershipsSpider(scrapy.Spider):
     name = 'senator_with_memberships'
@@ -58,12 +58,14 @@ class SenatorWithMembershipsSpider(scrapy.Spider):
         'DataFiliacao': 'startDate',
         'DataDesfiliacao': 'finishDate',
     }
-    senator_with_term_membership = {
+    senator_elected = {
         'CodigoMandato': 'skos:prefLabel',
         'UfParlamentar': 'natureza',
-        'NumeroLegislatura': 'legislatura',
+        'NumeroLegislatura': 'legislatura'
+    }
+    senator_effective = {
         'DataInicio': 'startDate',
-        'DataFim': 'finishDate',
+        'DataFim': 'finishDate'
     }
 
     senator_mapping = {
@@ -73,91 +75,92 @@ class SenatorWithMembershipsSpider(scrapy.Spider):
         'terms': [],
         'affiliations': [],
     }
-    meta_tags = ['depth', 'download_timeout', 'download_slot', 'download_latency']
+    meta_tags = ['depth', 'download_timeout',
+                 'download_slot', 'download_latency']
 
     def __init__(self, legislatura=55, *args, **kwargs):
-        super(scrapy.Spider).__init__(*args,**kwargs)
-        self.start_urls = [
-            '{:}lista/legislatura/{:}'.format(URL_OPEN_DATA_SENADO_API_V1, legislatura)
-        ]
+        super(scrapy.Spider).__init__(*args, **kwargs)
+        _url = '{:}lista/legislatura/{:}?exercicio=s' # only those which are exercising
+        _url = _url.format(URL_OPEN_DATA_SENADO_API_V1, legislatura)
 
-        # Roles dictionary
-        d = pd.read_csv('resource_uri/role_resource_uri.csv', sep= ';', index_col=0).to_dict()['skos:prefLabel']
-        self.db_roles = {v:k for k,v in d.items()}
-
-        # Senador uri's
-        df = pd.read_csv('resource_uri/senadores_resource_uri-55.csv', sep= ';', index_col=0)        
-        d = df['rdfs:label'].to_dict()       
-        self.db_senators = {v:k for k,v in d.items()}
+        self.legislatura = legislatura
+        self.start_urls = [_url]
+        self.agents = _getagents()
 
     def start_requests(self):
         '''
-            Stage 1: Request Get each senator for current term
+           Requests all senators 
+           Who effectively took office
         '''
         url = self.start_urls[0]
-        req = scrapy.Request(url,
-            self.parse_senator,
-            headers = {'accept': 'application/xml'}
-        )
+        req = scrapy.Request(url, self.parse_senators,
+                             headers={'accept': 'application/xml'})
         yield req
 
-    def parse_senator(self, response): 
+    def parse_senators(self, response):
         '''
             Parses information regarding Senator and Office terms and fills 
             senator_mapping (info about foaf:Person) and senator terms 
             (info about membership to senator role)
 
+            Only senators who took office - have membership
+            Only senators whose first term is requested are seletected
+
             args
                 self            .:  refence to the current object  
-                response  .:  a xml reponse for senators data
+                response        .:  a xml reponse for senators data
 
             returns
-                req        .: queries  <BASE_URL>/CodigoParlamentar/afiliacoes/             
-            
+                req             .: queries  <BASE_URL>/CodigoParlamentar/afiliacoes/
         '''
 
+        xpath_senators = './Parlamentares/Parlamentar'
+        xpath_id = './IdentificacaoParlamentar/'
+
         root = ET.fromstring(response.body_as_unicode())
-        parlamentares_elem = root.findall('./Parlamentares/Parlamentar') # XPath element
-        for parlamentar_elem in parlamentares_elem:
+
+        elem_senators = root.findall(xpath_senators)  # XPath element
+        for elem_senator in elem_senators:
             info = {}
-            for descriptors_elem in parlamentar_elem.findall('./IdentificacaoParlamentar/'):
+            for descriptors_elem in elem_senator.findall(xpath_id):
                 if descriptors_elem.tag in self.senator_mapping:
                     key = self.senator_mapping[descriptors_elem.tag]
                     info[key] = descriptors_elem.text
 
-            info['agent_resource_uri']= self.db_senators[info['foaf:name']]
+            resource_uri = self._getagent(info['foaf:name'])
+            if resource_uri is None:
+                resource_uri = str(uuid4())
+            info['resource_uri'] = resource_uri
 
-            #fills office terms as senator
-            info['terms']=[]
-            for terms_elem in parlamentar_elem.findall('./Mandatos/'):
-                term = {}
-                subterm_count = 1
-                for term_elem in terms_elem:
-                    if term_elem.tag in self.senator_with_term_membership:
-                        key= self.senator_with_term_membership[term_elem.tag]
-                        term[key]= term_elem.text
-                    
-                    #DateStart/ DateFinish
-                    if re.search('LegislaturaDoMandato', term_elem.tag):
-                        subterm={}
-                        for subterm_elem in term_elem:
-                            if subterm_elem.tag in self.senator_with_term_membership:
-                                key= str(self.senator_with_term_membership[subterm_elem.tag])
-                                subterm[key]= subterm_elem.text                                             
+            
 
-                        subterm.update(term)
-                        subterm['membership_resource_uri']= str(uuid4())
-                        subterm['role_resource_uri']= self.db_roles['Senador']
-                        info['terms'].append(subterm)           
 
-                url= senator_api_v1_uri(info['skos:prefLabel'])         
-                req = scrapy.Request(url, 
-                    self.parse_senator_affiliations,
-                    headers= {'accept': 'application/xml'},
-                    meta=info
-                )                                   
+            info['terms'] = []
+            for mandates in elem_senator.findall('./Mandatos/'):
                 
-                yield req
+                _area = mandates.find('UfParlamentar').text
+                _code = mandates.find('CodigoMandato').text
+                
+
+                for effecterms in mandates.findall('./Exercicios/'):
+                    _term = {'area': _area, 'code': _code}
+                    for effecterm in effecterms:
+                        if effecterm.tag in self.senator_elected:
+                            _key = self.senator_elected[effecterm.tag]
+                            _term[_key] = effecterm.text
+                    _term['resource_uri'] = str(uuid4())
+                    _term['role'] = SENATOR_URI
+                    info['terms'].append(_term)
+
+
+
+            url = senator_api_v1_uri(info['skos:prefLabel'])
+            req = scrapy.Request(url, 
+                self.parse_senator_affiliations,
+                headers = {'accept': 'application/xml'},
+                meta = info
+            )
+            yield req
 
 
     def parse_senator_affiliations(self, response): 
@@ -172,36 +175,42 @@ class SenatorWithMembershipsSpider(scrapy.Spider):
 
             returns
                 req        .: queries  <BASE_URL>/CodigoParlamentar/afiliacoes/             
-            
-        '''                         
-        
-        
-        info= response.meta 
-        for meta in self.meta_tags:     
+ 
+        '''
+        info = response.meta
+        for meta in self.meta_tags:
             del info[meta]
 
-        root = ET.fromstring(response.body_as_unicode())            
-        affiliations_elem= root.findall('./Parlamentar/Filiacoes/Filiacao') # XPath element
-        info['affiliations']= []
+        root = ET.fromstring(response.body_as_unicode())
+        affiliations_elem = root.findall('./Parlamentar/Filiacoes/Filiacao') # XPath element
+        info['affiliations'] = []
         for affiliation_elem in affiliations_elem:
-            affiliation={}
-            for item_elem in affiliation_elem:              
+            affiliation = {}
+            for item_elem in affiliation_elem:
                 if item_elem.tag == 'Partido':
                     for subitem in item_elem:
                         if subitem.tag in self.senator_with_affiliation_membership:
-                            key= self.senator_with_affiliation_membership[subitem.tag]
-                            affiliation[key]= subitem.text
-                
+                            key = self.senator_with_affiliation_membership[subitem.tag]
+                            affiliation[key] = subitem.text
+
                 if item_elem.tag in self.senator_with_affiliation_membership:
-                    key= self.senator_with_affiliation_membership[item_elem.tag]
+                    key = self.senator_with_affiliation_membership[item_elem.tag]
                     affiliation[key]= item_elem.text
             affiliation['resource_uri']= str(uuid4())
-            affiliation['role_resource_uri']= self.db_roles['Afiliado']
+            affiliation['role'] = AFFILIATE_URI
             info['affiliations'].append(affiliation)
 
-        yield info      
+        yield info
+
+    def _getagent(self, fullname):
+        return self.agents['sen:NomeCompletoParlamentar'].get(fullname, None)
+
 
 def senator_api_v1_uri(person_registration_id):
-    uri= URL_OPEN_DATA_SENADO_API_V1
-    uri= '{:}{:}/filiacoes'.format(uri, person_registration_id)
+    uri = URL_OPEN_DATA_SENADO_API_V1
+    uri = '{:}{:}/filiacoes'.format(uri, person_registration_id)
     return uri
+
+def _getagents():
+    df = pd.read_csv('datasets/slp/agents.csv', encoding='utf-8', sep= ';', index_col=0)    
+    return df.to_dict()
