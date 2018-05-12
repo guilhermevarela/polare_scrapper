@@ -17,7 +17,7 @@
 
     Scrapy running: scrapy runspider spider_senator_with_memberships.py
 
-    Scrapy run + store: scrapy runspider spider_senator_with_memberships.py -o datasets/sen/json/senator_with_memberships-55_56.json -a legislatura=55
+    Scrapy run + store: scrapy runspider spider_senator_with_memberships.py -o datasets/senado/senator_with_memberships-55.json -a legislatura=55
 '''
 from datetime import datetime
 from datetime import date 
@@ -145,8 +145,8 @@ class SenatorWithMembershipsSpider(scrapy.Spider):
                 for effecterms in mandates.findall('./Exercicios/'):
                     _term = {'area': _area, 'code': _code}
                     for effecterm in effecterms:
-                        if effecterm.tag in self.senator_elected:
-                            _key = self.senator_elected[effecterm.tag]
+                        if effecterm.tag in self.senator_effective:
+                            _key = self.senator_effective[effecterm.tag]
                             _term[_key] = effecterm.text
                     _term['resource_uri'] = str(uuid4())
                     _term['role'] = SENATOR_URI
