@@ -67,8 +67,8 @@ class CongressmanWithMembershipsSpider(scrapy.Spider):
         'ideCadastro', 'nomeCivil', 'nomeParlamentarAtual',
         'dataNascimento', 'dataFalecimento'])
 
-    def __init__(self, legislatura= 55, *args,**kwargs):
-        super(scrapy.Spider).__init__(*args,**kwargs)
+    def __init__(self, legislatura=55, *args, **kwargs):
+        super(scrapy.Spider).__init__(*args, **kwargs)
         self.old_congressmen = aux.get_congressmen(deprecated=True)
         self.congressmen = aux.get_congressmen()
         self.parties = aux.get_party()
