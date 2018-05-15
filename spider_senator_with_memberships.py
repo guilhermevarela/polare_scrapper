@@ -29,10 +29,7 @@ import xml.etree.ElementTree as ET
 import pandas as pd 
 import numpy as np 
 
-#resource_uri generation and testing
-# from resource_uri.getters import get_congressmen, get_party
-# from resource_uri.setters import set_person_resource_uri
- 
+
 # Unique id without Network address
 from uuid import uuid4 
 
@@ -43,6 +40,7 @@ URL_OPEN_DATA_SENADO_API_V1= 'http://legis.senado.leg.br/dadosabertos/senador/'
 SENATOR_URI = 'd57a29ff-c69a-4b32-b98a-3dd8f204c0a3'
 SENADO_URI = '81311052-e5b6-46fe-87ba-83865fa0ffb0'
 AFFILIATE_URI = '6a688541-b16a-45ca-8aa9-fa700373279f'
+
 
 class SenatorWithMembershipsSpider(scrapy.Spider):
     name = 'senator_with_memberships'
@@ -67,7 +65,11 @@ class SenatorWithMembershipsSpider(scrapy.Spider):
         'DataInicio': 'startDate',
         'DataFim': 'finishDate'
     }
-
+    senator_dependencies = {
+        'DescricaoParticipacao': 'description',
+        'CodigoParlamentar': 'skos:prefLabel',
+        'NomeParlamentar': 'rdfs:label'
+    }
     senator_mapping = {
         'CodigoParlamentar': 'skos:prefLabel',
         'NomeCompletoParlamentar': 'foaf:name',
@@ -132,18 +134,19 @@ class SenatorWithMembershipsSpider(scrapy.Spider):
                 resource_uri = str(uuid4())
             info['resource_uri'] = resource_uri
 
-            
-
 
             info['terms'] = []
             for mandates in elem_senator.findall('./Mandatos/'):
-                
+
                 _area = mandates.find('UfParlamentar').text
                 _code = mandates.find('CodigoMandato').text
-                
+                _description = mandates.find('DescricaoParticipacao').text
+
 
                 for effecterms in mandates.findall('./Exercicios/'):
-                    _term = {'area': _area, 'code': _code}
+                    _term = {'area': _area,
+                             'code': _code,
+                             'description': _description}
                     for effecterm in effecterms:
                         if effecterm.tag in self.senator_effective:
                             _key = self.senator_effective[effecterm.tag]
@@ -152,18 +155,18 @@ class SenatorWithMembershipsSpider(scrapy.Spider):
                     _term['role'] = SENATOR_URI
                     info['terms'].append(_term)
 
-
+                self._process_dependents(mandates, info)
 
             url = senator_api_v1_uri(info['skos:prefLabel'])
-            req = scrapy.Request(url, 
+            req = scrapy.Request(url,
                 self.parse_senator_affiliations,
-                headers = {'accept': 'application/xml'},
-                meta = info
+                headers={'accept': 'application/xml'},
+                meta=info
             )
             yield req
 
 
-    def parse_senator_affiliations(self, response): 
+    def parse_senator_affiliations(self, response):
         '''
             Parses information regarding Senator and Party affiliations
             senator_mapping (info about foaf:Person) and senator terms 
@@ -201,6 +204,33 @@ class SenatorWithMembershipsSpider(scrapy.Spider):
             info['affiliations'].append(affiliation)
 
         yield info
+
+    def _process_dependents(self, mandate_root, info):
+        '''
+            Senator might be Titular, 1rst Suplente 2nd Suplente ...
+            parses a senator within url dadosabertos
+
+            mandate_root .:
+            info .:
+        '''
+        info['owner'] = []
+        for elected in mandate_root.findall('./Titular'):
+            _father = {}
+            _father['description'] = elected.find('DescricaoParticipacao').text
+            _father['skos:prefLabel'] = elected.find('CodigoParlamentar').text
+            _father['rdfs:label'] = elected.find('NomeParlamentar').text
+            info['owner'].append(_father)
+
+        info['dependents'] = []
+        for dep in mandate_root.findall('./Suplentes/Suplente'):
+            _dependents = {}
+            _dependents['description'] = dep.find('DescricaoParticipacao').text
+            _dependents['skos:prefLabel'] = dep.find('CodigoParlamentar').text
+            _dependents['rdfs:label'] = dep.find('NomeParlamentar').text
+            info['dependents'].append(_dependents)
+
+        return info
+
 
     def _getagent(self, fullname):
         return self.agents['sen:NomeCompletoParlamentar'].get(fullname, None)
