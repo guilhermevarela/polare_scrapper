@@ -82,7 +82,8 @@ class SenatorWithMembershipsSpider(scrapy.Spider):
 
     def __init__(self, legislatura=55, *args, **kwargs):
         super(scrapy.Spider).__init__(*args, **kwargs)
-        _url = '{:}lista/legislatura/{:}?exercicio=s' # only those which are exercising
+        # _url = '{:}lista/legislatura/{:}?exercicio=s' # only those which are exercising
+        _url = '{:}lista/legislatura/{:}' # only those which are exercising
         _url = _url.format(URL_OPEN_DATA_SENADO_API_V1, legislatura)
 
         self.legislatura = legislatura
