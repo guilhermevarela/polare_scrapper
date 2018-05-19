@@ -1,38 +1,7 @@
 import hashlib
 
 
-# def person_uri(fullname, birthdate):
-#     '''
-#         args:
-#             fullname  .: string field fullname for prov=camara
-
-#             birthdate .: string representing a date in format YYYY-MM-DD
-#                             field dataNascimento for prov=camara
-
-#         returns: 
-#             person_uri .: 
-        
-#         usage:
-#             > _uri = person_uri("CAJAR ONESIMO RIBEIRO NARDES", "1965-11-16")
-#             > _uri  
-#             > 'http://www.seliganapolitica.org/resource/24b59d74cbd2d06169557b5bbcdfcdf5'
-#     '''
-#     year = "";
-#     if fullname == "":
-#         return ""
-
-#     if birthdate != "" and birthdate!="99":
-#         year = birthdate
-
-#     splistring = fullname.split()
-#     splistring=sorted(splistring)
-#     id = ""
-#     for x in splistring:
-#         id = id + x
-#     id = id+","+year
-#     id = id.encode('utf-8');
-    
-#     return "http://www.seliganapolitica.org/resource/" + hashlib.md5(id).hexdigest()
+POLARE_PREFIX_URI = "http://www.seliganapolitica.org/resource/"
 
 
 
@@ -67,7 +36,7 @@ def person_uri(fullname, birthdate):
     token = token + "," + year
     token = token.encode('utf-8')
 
-    return "http://www.seliganapolitica.org/resource/" + hashlib.md5(token).hexdigest()
+    return POLARE_PREFIX_URI + hashlib.md5(token).hexdigest()
 
 
 def membership_party_uri(fullname, uriparty):
@@ -94,7 +63,7 @@ def membership_party_uri(fullname, uriparty):
     token = fullname + token + "partido" + "membership"
     token = token.encode('utf-8')
 
-    return "http://www.seliganapolitica.org/resource/" + hashlib.md5(token).hexdigest()
+    return POLARE_PREFIX_URI + hashlib.md5(token).hexdigest()
 
 
 def party_uri(nameparty):
@@ -115,7 +84,7 @@ def party_uri(nameparty):
     '''
     token = str("partido" + nameparty).encode('utf-8')
 
-    return "http://www.seliganapolitica.org/resource/" + hashlib.md5(token).hexdigest()
+    return POLARE_PREFIX_URI + hashlib.md5(token).hexdigest()
 
 
 
@@ -131,8 +100,8 @@ def post_with_camara_uri(nickname):
         usage:
             #POST AT CAMARA
             > nickname = 'ADAIL CARNEIRO' # fullname = 'JOSE ADAIL CARNEIRO SILVA'
-            > _uri = post_uri('ADAIL CARNEIRO', '')
-            > _uri 
+            > _uri = post_with_camara_uri('ADAIL CARNEIRO')
+            > _uri
             > http://www.seliganapolitica.org/resource/a983550281d2c166128a9cb63cf00db7
 
     '''
@@ -142,7 +111,7 @@ def post_with_camara_uri(nickname):
     token = nickname + token + "membership" + "post"
     token = token.encode('utf-8')
 
-    return "http://www.seliganapolitica.org/resource/" + hashlib.md5(token).hexdigest()
+    return POLARE_PREFIX_URI + hashlib.md5(token).hexdigest()
 
 
 def post_with_party_uri(nickname, uriorg):
@@ -155,18 +124,12 @@ def post_with_party_uri(nickname, uriorg):
 
         returns:
         usage:
-            #POST AT CAMARA
-            > nickname = 'ADAIL CARNEIRO' # fullname = 'JOSE ADAIL CARNEIRO SILVA'
-            > _uri = post_uri('ADAIL CARNEIRO', '')
-            > _uri 
-            > http://www.seliganapolitica.org/resource/a983550281d2c166128a9cb63cf00db7
-
             #POST AT PARTY
             > nickname = 'ADAIL CARNEIRO' # fullname = 'JOSE ADAIL CARNEIRO SILVA'
             > _uri = post_uri('ADAIL CARNEIRO', '')
             > _uri 
             > http://www.seliganapolitica.org/resource/a983550281d2c166128a9cb63cf00db7
-            
+
     '''
     # BUGFIX: this section of the code isn't working on original script
     splistring = uriorg.split()    
@@ -178,8 +141,8 @@ def post_with_party_uri(nickname, uriorg):
     token = token.encode('utf-8')
 
 
-    return "http://www.seliganapolitica.org/resource/" + hashlib.md5(token).hexdigest()
-    
+    return POLARE_PREFIX_URI + hashlib.md5(token).hexdigest()
+
 
 
 
