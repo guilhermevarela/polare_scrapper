@@ -4,7 +4,6 @@ import hashlib
 POLARE_PREFIX_URI = "http://www.seliganapolitica.org/resource/"
 
 
-
 def person_uri(fullname, birthdate):
     '''
         args:
@@ -85,7 +84,6 @@ def party_uri(nameparty):
     token = str("partido" + nameparty).encode('utf-8')
 
     return POLARE_PREFIX_URI + hashlib.md5(token).hexdigest()
-
 
 
 def post_with_camara_uri(nickname):
