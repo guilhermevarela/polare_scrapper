@@ -142,6 +142,33 @@ def post_with_party_uri(nickname, uriorg):
     return POLARE_PREFIX_URI + hashlib.md5(token).hexdigest()
 
 
+def formaleducation_uri(formaledu):
+    '''
+        Converts formal education into mds
+
+        args:
+
+            formaledu    .: string proper case stringg representing a skos:Concept 
+                Formacao 
+        
+        returns:
+            skos_concept .: string  skos/Formacao#MD5 format
+
+        usage:
+            > _uri = formaleducation_uri('Pós-Graduação')
+            > _uri 
+            > http://www.seliganapolitica.org/resource/a983550281d2c166128a9cb63cf00db7
+
+
+    '''
+
+    token = ""
+    if formaledu != "" and formaledu !="99":
+        token = ("formacao" + formaledu).encode('utf-8')
+    else:
+        return ""
+
+    return "http://www.seliganapolitica.org/resource/skos/Formacao#" + hashlib.md5(token).hexdigest()
 
 
 if __name__ == '__main__':
@@ -149,6 +176,11 @@ if __name__ == '__main__':
     assert post_with_camara_uri('ABEL MESQUITA JR.') == 'http://www.seliganapolitica.org/resource/fbc1570e611de1df1da5b46b3e906642'
     assert post_with_camara_uri('ADAIL CARNEIRO') == 'http://www.seliganapolitica.org/resource/a983550281d2c166128a9cb63cf00db7'
 
-    # POSTS AT PARTY    
+    # POSTS AT PARTY
     assert post_with_party_uri('ADALBERTO CAVALCANTI', 'https://dadosabertos.camara.leg.br/api/v2/partidos/36845') == 'http://www.seliganapolitica.org/resource/8263145ba42b59440d6c6f8d27eda262'
     assert post_with_party_uri('ADELMO CARNEIRO LEÃO', 'https://dadosabertos.camara.leg.br/api/v2/partidos/36844') == 'http://www.seliganapolitica.org/resource/9c1a78ecb33c4ad4b8f896c0a1f231ca'
+
+    # SKOS CONCEPT
+    assert formaleducation_uri('Superior Incompleto') == 'http://www.seliganapolitica.org/resource/skos/Formacao#ec238d6602d2f1335ef191e2ed11ef16'
+    assert formaleducation_uri('Ensino Médio') == 'http://www.seliganapolitica.org/resource/skos/Formacao#f4af3310e4affe57057460650e333b54'
+    assert formaleducation_uri('Pós-Graduação') == 'http://www.seliganapolitica.org/resource/skos/Formacao#d39ca2bdd294b390594cb71f1c77bc4b'
