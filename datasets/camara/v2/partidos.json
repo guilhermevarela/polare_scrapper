@@ -1,0 +1,92 @@
+[
+    {
+      "id": 36898,
+      "sigla": "AVANTE",
+      "nome": "Avante",
+      "uri": "https://dadosabertos.camara.leg.br/api/v2/partidos/36898"
+    },
+    {
+      "id": 36769,
+      "sigla": "DEM",
+      "nome": "Democratas",
+      "uri": "https://dadosabertos.camara.leg.br/api/v2/partidos/36769"
+    },
+    {
+      "id": 36779,
+      "sigla": "PCdoB",
+      "nome": "Partido Comunista do Brasil",
+      "uri": "https://dadosabertos.camara.leg.br/api/v2/partidos/36779"
+    },
+    {
+      "id": 36786,
+      "sigla": "PDT",
+      "nome": "Partido Democrático Trabalhista",
+      "uri": "https://dadosabertos.camara.leg.br/api/v2/partidos/36786"
+    },
+    {
+      "id": 36761,
+      "sigla": "PEN",
+      "nome": "Partido Ecológico Nacional",
+      "uri": "https://dadosabertos.camara.leg.br/api/v2/partidos/36761"
+    },
+    {
+      "id": 36793,
+      "sigla": "PHS",
+      "nome": "Partido Humanista da Solidariedade",
+      "uri": "https://dadosabertos.camara.leg.br/api/v2/partidos/36793"
+    },
+    {
+      "id": 36887,
+      "sigla": "PMB",
+      "nome": "Partido da Mulher Brasileira",
+      "uri": "https://dadosabertos.camara.leg.br/api/v2/partidos/36887"
+    },
+    {
+      "id": 36800,
+      "sigla": "PMDB",
+      "nome": "Partido do Movimento Democrático Brasileiro",
+      "uri": "https://dadosabertos.camara.leg.br/api/v2/partidos/36800"
+    },
+    {
+      "id": 36801,
+      "sigla": "PMN",
+      "nome": "Partido da Mobilização Nacional",
+      "uri": "https://dadosabertos.camara.leg.br/api/v2/partidos/36801"
+    },
+    {
+      "id": 36896,
+      "sigla": "PODE",
+      "nome": "Podemos",
+      "uri": "https://dadosabertos.camara.leg.br/api/v2/partidos/36896"
+    },
+    {
+      "id": 36809,
+      "sigla": "PP",
+      "nome": "Partido Progressista",
+      "uri": "https://dadosabertos.camara.leg.br/api/v2/partidos/36809"
+    },
+    {
+      "id": 36762,
+      "sigla": "PPL",
+      "nome": "Partido Pátria Livre",
+      "uri": "https://dadosabertos.camara.leg.br/api/v2/partidos/36762"
+    },
+    {
+      "id": 36813,
+      "sigla": "PPS",
+      "nome": "Partido Popular Socialista",
+      "uri": "https://dadosabertos.camara.leg.br/api/v2/partidos/36813"
+    },
+    {
+      "id": 36814,
+      "sigla": "PR",
+      "nome": "Partido da República",
+      "uri": "https://dadosabertos.camara.leg.br/api/v2/partidos/36814"
+    },
+    {
+      "id": 36815,
+      "sigla": "PRB",
+      "nome": "Partido Republicano Brasileiro",
+      "uri": "https://dadosabertos.camara.leg.br/api/v2/partidos/36815"
+    }
+]
