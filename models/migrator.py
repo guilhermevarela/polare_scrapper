@@ -75,6 +75,15 @@ class Migrator(object):
         '''
             Computes an dictionary olduri --> newuri
         '''
+        agents_path = 'datasets/migrations/mappings/agents.json'
+        if os.path.isfile(agents_path):
+            with open(agents_path, mode='r') as f:
+                agents_dict = json.load(f)
+            f.close()
+        else:
+            agents_dict = {}
+
+
         _df = pd.read_csv('datasets/slp/agents.csv', sep=';', encoding='utf-8', index_col=0)
         print(_df.columns)
         _df = _df[['cam:nomeCivil', 'cam:dataNascimento']]
@@ -88,12 +97,25 @@ class Migrator(object):
             for idx in _fullname  if _fullname[idx] and isinstance(_fullname [idx], str)
         }
 
+
+
+
     def _initialize_formaleducation(self):
         '''
             Computes an dictionary olduri --> newuri
+            args:
+            returns:
+                formaleducation .: dict<str, list<str>>
+                                    keys  .: str presenting a educational formation
+                                    values        .: list of two items
+                                        value[0]  .:  str md5() for resource
+                                        value[1]  .:  str uuid4() for resource
+
+            usage:
+                self.formaleducation = self._initialize_formaleducation()
+                {'Superior': ['2f615aa52f420810e559590a4cfbfafd', '01e502af-2208-4184-87db-c7162e14e60e']}
         '''
         formaleducation_path = 'datasets/migrations/mappings/formaleducation.json'
-        # import code; code.interact(local=dict(globals(), **locals()))
         if os.path.isfile(formaleducation_path):
             with open(formaleducation_path, mode='r') as f:
                 educ_dict = json.load(f)
