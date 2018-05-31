@@ -35,7 +35,8 @@ def person_uri(fullname, birthdate):
     token = token + "," + year
     token = token.encode('utf-8')
 
-    return POLARE_PREFIX_URI + hashlib.md5(token).hexdigest()
+    # return POLARE_PREFIX_URI + hashlib.md5(token).hexdigest()
+    return hashlib.md5(token).hexdigest()
 
 
 def membership_party_uri(fullname, uriparty):
@@ -62,7 +63,8 @@ def membership_party_uri(fullname, uriparty):
     token = fullname + token + "partido" + "membership"
     token = token.encode('utf-8')
 
-    return POLARE_PREFIX_URI + hashlib.md5(token).hexdigest()
+    # return POLARE_PREFIX_URI + hashlib.md5(token).hexdigest()
+    return hashlib.md5(token).hexdigest()
 
 
 def party_uri(nameparty):
@@ -83,7 +85,8 @@ def party_uri(nameparty):
     '''
     token = str("partido" + nameparty).encode('utf-8')
 
-    return POLARE_PREFIX_URI + hashlib.md5(token).hexdigest()
+    # return POLARE_PREFIX_URI + hashlib.md5(token).hexdigest()
+    return hashlib.md5(token).hexdigest()
 
 
 def post_with_camara_uri(nickname):
@@ -109,7 +112,8 @@ def post_with_camara_uri(nickname):
     token = nickname + token + "membership" + "post"
     token = token.encode('utf-8')
 
-    return POLARE_PREFIX_URI + hashlib.md5(token).hexdigest()
+    # return POLARE_PREFIX_URI + hashlib.md5(token).hexdigest()
+    return hashlib.md5(token).hexdigest()
 
 
 def post_with_party_uri(nickname, uriorg):
@@ -140,6 +144,7 @@ def post_with_party_uri(nickname, uriorg):
 
 
     return POLARE_PREFIX_URI + hashlib.md5(token).hexdigest()
+    
 
 
 def formaleducation_uri(formaledu):
@@ -172,9 +177,12 @@ def formaleducation_uri(formaledu):
 
 
 if __name__ == '__main__':
+    #AGENT
+    assert person_uri('ALAN RICK MIRANDA', '1976-10-23') == '3f8ce45065ead34564ffbb987a294be7'
+
     # POSTS AT CAMARA
-    assert post_with_camara_uri('ABEL MESQUITA JR.') == 'http://www.seliganapolitica.org/resource/fbc1570e611de1df1da5b46b3e906642'
-    assert post_with_camara_uri('ADAIL CARNEIRO') == 'http://www.seliganapolitica.org/resource/a983550281d2c166128a9cb63cf00db7'
+    assert post_with_camara_uri('ABEL MESQUITA JR.') == 'fbc1570e611de1df1da5b46b3e906642'
+    assert post_with_camara_uri('ADAIL CARNEIRO') == 'a983550281d2c166128a9cb63cf00db7'
 
     # POSTS AT PARTY
     assert post_with_party_uri('ADALBERTO CAVALCANTI', 'https://dadosabertos.camara.leg.br/api/v2/partidos/36845') == 'http://www.seliganapolitica.org/resource/8263145ba42b59440d6c6f8d27eda262'

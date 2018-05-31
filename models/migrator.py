@@ -1,13 +1,16 @@
+import os
+import re
 import glob
 import pandas as pd
 import json
 import sys
 sys.path.append('..')
 sys.path.append('scripts')
-import os.path
+# import os.path
 import errno
 
-from uri_generators import person_uri
+from uri_generators import person_uri, formaleducation_uri
+from uuid import uuid4
 
 
 class Migrator(object):
@@ -17,7 +20,8 @@ class Migrator(object):
     '''
 
     def __init__(self):
-        self._attach_agents()
+        self._initialize_agents()
+        self._initialize_formaleducation()
 
     def migrate(self, input_file):
         '''
@@ -48,8 +52,11 @@ class Migrator(object):
             f.close()
 
             for oldidx, newidx in self.agents.items():
-                import code; code.interact(local=dict(globals(), **locals()))
                 txt = txt.replace(oldidx, newidx)
+
+            for oldidx, newidx in self.formaleducation.items():
+                # import code; code.interact(local=dict(globals(), **locals()))
+                txt = txt.replace(oldidx, newidx[-1])
 
             if not os.path.exists(os.path.dirname(output_dir)):
                 try:
@@ -64,23 +71,58 @@ class Migrator(object):
         f.close()
         print('saved at ', output_path)
 
-    def _attach_agents(self):
+    def _initialize_agents(self):
         '''
             Computes an dictionary olduri --> newuri
         '''
         _df = pd.read_csv('datasets/slp/agents.csv', sep=';', encoding='utf-8', index_col=0)
         print(_df.columns)
-        _df = _df[['cam:nomeParlamentarAtual', 'cam:dataNascimento']]
+        _df = _df[['cam:nomeCivil', 'cam:dataNascimento']]
 
 
-        _alias = _df['cam:nomeParlamentarAtual'].to_dict()
+        _fullname = _df['cam:nomeCivil'].to_dict()
         _birthdate = _df['cam:dataNascimento'].to_dict()
-        
+
         self.agents = {
-            person_uri(_alias[idx], _birthdate[idx]): idx
-            for idx in _alias if _alias[idx] and isinstance(_alias[idx], str)
+            person_uri(_fullname[idx], _birthdate[idx]): idx
+            for idx in _fullname  if _fullname[idx] and isinstance(_fullname [idx], str)
         }
 
+    def _initialize_formaleducation(self):
+        '''
+            Computes an dictionary olduri --> newuri
+        '''
+        formaleducation_path = 'datasets/migrations/mappings/formaleducation.json'
+        # import code; code.interact(local=dict(globals(), **locals()))
+        if os.path.isfile(formaleducation_path):
+            with open(formaleducation_path, mode='r') as f:
+                educ_dict = json.load(f)
+            f.close()
+        else:
+            educ_dict = {}
+
+        tags = '<escolaridade>(.*?)</escolaridade>'
+        finder = lambda x : re.findall(tags, x)
+        educ_set = set()
+        for g in glob.glob('datasets/migrations/xml/*'):
+            with open(g, mode='r') as f:
+                contents = f.read()
+            f.close()
+            educ_set = set(finder(contents)).union(educ_set)
+
+        educ_list = list(educ_set)
+        for i in educ_list:
+            if not i in educ_dict:
+                # http://www.seliganapolitica.org/resource/skos/Formacao#
+                olduri = re.sub('http://www.seliganapolitica.org/resource/skos/Formacao#','',formaleducation_uri(i))
+                educ_dict[i] = (olduri, str(uuid4()))
+
+        with open(formaleducation_path, mode='w') as f:
+            json.dump(educ_dict, f)
+        f.close()
+
+
+        self.formaleducation = educ_dict
 
 
 class MapperPerson(object):
