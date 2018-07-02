@@ -32,7 +32,7 @@ def parse_fn(txt):
     return re.sub(r'\n| ', '', str(txt))
 
 
-def get_congressmen(deprecated=False):
+def get_agents():
     '''
         Provides a dictionary with keys being api ids 
         OUTPUT
@@ -40,12 +40,11 @@ def get_congressmen(deprecated=False):
                 key: ideCadastro api v1 camara
                 value: resource uri
     '''
-    if deprecated:
-        result = get_resource('deprecated/person_resource_uri.csv', 'ideCadastro', 'resource_uri')
-    else:
-        # congressmen-cam-55.csv
-        result = get_resource('slp/agents/congressmen-cam-55.csv', 'cam:ideCadastro', 'slp:resource_uri')
-    return result
+    resources_path = 'datasets/slp/agents.csv'
+    df = pd.read_csv(
+        resources_path, sep=';', index_col=0, header=0, encoding='utf-8'
+    )
+    return df.to_dict()
 
 
 def get_party():
@@ -56,14 +55,16 @@ def get_party():
                 key: ideCadastro api v1 camara
                 value: resource uri
     '''
-    result = get_resource('slp/organizations/parties.csv', 'sigla', 'slp:resource_uri')
+    result = get_resource(
+        'slp/organizations/parties-tse.csv', 'sigla', 'slp:resource_uri'
+    )
 
     return result
 
 
 def get_role():
 
-    result = get_resource('slp/roles.csv', 'skos:prefLabel', 'slp:resource_uri')
+    result = get_resource('slp/roles.csv', 'rdfs:label', 'resource_uri')
 
     return result
 
@@ -82,11 +83,15 @@ def get_resource(table, key_column, resource_uri_column):
             dict<key<int>,polare_resource_uri<string>>: dictionary
     '''
     #Current dir will be where the spiders are
-    resource_path = 'datasets/' + table
-    df = pd.read_csv(resource_path, sep=';', index_col=None, header=0, encoding='utf-8')
+    resource_path = 'datasets/' + table    
+    df = pd.read_csv(
+        resource_path, sep=';', index_col=None, header=0, encoding='utf-8'
+    )
+
     result = {
         key:value
             for key, value in
                 zip(df[key_column],df[resource_uri_column])}
 
     return result
+
