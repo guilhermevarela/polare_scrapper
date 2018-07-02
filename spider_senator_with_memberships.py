@@ -20,10 +20,10 @@
     Scrapy run + store: scrapy runspider spider_senator_with_memberships.py -o datasets/senado/senator_with_memberships-55.json -a legislatura=55
 '''
 from datetime import datetime
-from datetime import date 
+from datetime import date
 import scrapy
 import re
-import xml.etree.ElementTree as ET 
+import xml.etree.ElementTree as ET
 
 #import because of files
 import pandas as pd 
@@ -35,7 +35,7 @@ from uuid import uuid4
 
 POLARE_PREFIX='http://www.seliganapolitica.org/resource/'
 # URL_OPEN_DATA_SENADO_API_V1= 'http://legis.senado.leg.br/dadosabertos/senator/lista/legislatura/'
-URL_OPEN_DATA_SENADO_API_V1= 'http://legis.senado.leg.br/dadosabertos/senador/'
+URL_OPEN_DATA_SENADO_API_V1 = 'http://legis.senado.leg.br/dadosabertos/senador/'
 
 SENATOR_URI = 'd57a29ff-c69a-4b32-b98a-3dd8f204c0a3'
 SENADO_URI = '81311052-e5b6-46fe-87ba-83865fa0ffb0'

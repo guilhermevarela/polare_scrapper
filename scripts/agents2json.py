@@ -109,12 +109,12 @@ if __name__ == '__main__':
     source_path = 'datasets/slp/agents.csv'
     df = pd.read_csv(source_path, sep=';', index_col=0).fillna('N/A')
     agents_dict = df.to_dict('index')
-    
-    # filename ='agents'
-    # Uncomment to generate a sample
-    keys = sample(list(agents_dict), 3)
-    agents_dict = {key: agents_dict[key] for key in keys}
-    filename ='sample_agents'
+
+    filename ='agents'
+    # # Uncomment to generate a sample
+    # keys = sample(list(agents_dict), 3)
+    # agents_dict = {key: agents_dict[key] for key in keys}
+    # filename ='sample_agents'
 
 
     make_agents_json(agents_dict, filename=filename)

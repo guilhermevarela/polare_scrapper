@@ -35,7 +35,7 @@ import aux
 # Unique id without Network address
 from uuid import uuid4
 
-POLARE_PREFIX='http://www.seliganapolitica.org/resource/'
+POLARE_PREFIX ='http://www.seliganapolitica.org/resource/'
 
 URL_OPEN_DATA_CAMARA_API_V1 = 'http://www.camara.leg.br/SitCamaraWS/Deputados.asmx/'
 URL_OPEN_DATA_CAMARA_API_V2 = 'https://dadosabertos.camara.leg.br/api/v2/deputados'
