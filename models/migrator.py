@@ -1,3 +1,19 @@
+'''This scripts converts legacy uris into current ones
+
+Some uris are converted from md5 format to uuid4
+
+Converts:
+
+    * Agents
+    * Formal education
+    * Organization (Parties)
+
+Removes instances from:
+    
+    * Membership
+    * Post
+
+'''
 import os
 import re
 import glob
@@ -6,7 +22,7 @@ import json
 import sys
 sys.path.append('..')
 sys.path.append('scripts')
-# import os.path
+
 import errno
 
 from uri_generators import person_uri, formaleducation_uri
@@ -22,6 +38,8 @@ class Migrator(object):
     def __init__(self):
         self._initialize_agents()
         self._initialize_formaleducation()
+        self._initialize_parties()
+        # import code; code.interact(local=dict(globals(), **locals()))
 
     def migrate(self, input_file):
         '''
@@ -55,6 +73,9 @@ class Migrator(object):
                 txt = txt.replace(*old_newidx)
 
             for _, old_newidx in self.formaleducation.items():
+                txt = txt.replace(*old_newidx)
+
+            for _, old_newidx in self.parties_dict.items():
                 txt = txt.replace(*old_newidx)
 
             if not os.path.exists(os.path.dirname(output_dir)):
@@ -177,6 +198,30 @@ class Migrator(object):
 
         self.formaleducation = educ_dict
 
+    def _initialize_parties(self):
+        '''[summary]
+
+        Computes a new party attribute list
+        '''
+        # organizations_path = 'datasets/slp/organizations.csv'
+        # df = pd.read_csv(organizations_path, sep=';', index_col=0)
+
+
+        parties_path = 'datasets/migrations/mappings/parties.json'
+        if not os.path.isfile(parties_path):
+            parties_dict = make_party_mapping_dict()
+            with open(parties_path, mode='w') as f:
+                json.dump(parties_dict, f)
+            f.close()
+
+        else:
+            with open(parties_path, mode='r') as f:
+                parties_dict = json.load(f)
+            f.close()
+
+        self.parties_dict = parties_dict
+
+
 
 def dict2dict_list(map_dict):
     '''
@@ -197,6 +242,30 @@ def dict_list2dict(dict_list):
     return {tuple(item_dict['key']):item_dict['value'] for item_dict in dict_list}
 
 
+def make_party_mapping_dict():
+    '''Computes party_mapping_dict
+
+        keys will be `sigla` field
+        values list of values
+    '''
+    organizations_path = 'datasets/slp/organizations.csv'
+    df = pd.read_csv(organizations_path, sep=';', index_col=0)
+
+    parties_path = 'datasets/camara/v2/partidos.json'
+    with open(parties_path, mode='r') as f:
+        parties_list = json.load(f)
+
+    party_mapping_dict = {}
+    for dict_ in parties_list:
+        rec_ = df[df.loc[:,'sigla'] == dict_['sigla']]
+        if rec_.shape[0] == 0:
+            raise KeyError('Sigla {:} not found on file organizations.csv. Update organizations.csv!'.format(dict_['sigla']))
+        else:
+            party_mapping_dict[dict_['sigla']] = (dict_['uri'], rec_.index[0])
+    return party_mapping_dict
+
+
+
+
 if __name__ == '__main__':
     Migrator().migrate('datasets/migrations/rdf/deputados-info-legislatura-55.txt')
-    

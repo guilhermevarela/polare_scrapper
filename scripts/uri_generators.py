@@ -180,6 +180,9 @@ if __name__ == '__main__':
     #AGENT
     assert person_uri('ALAN RICK MIRANDA', '1976-10-23') == '3f8ce45065ead34564ffbb987a294be7'
 
+    #PARTIES
+    assert person_uri('ALAN RICK MIRANDA', '1976-10-23') == '3f8ce45065ead34564ffbb987a294be7'
+    
     # POSTS AT CAMARA
     assert post_with_camara_uri('ABEL MESQUITA JR.') == 'fbc1570e611de1df1da5b46b3e906642'
     assert post_with_camara_uri('ADAIL CARNEIRO') == 'a983550281d2c166128a9cb63cf00db7'
