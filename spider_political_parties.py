@@ -73,7 +73,7 @@ class TsePoliticalPartiesSpider(scrapy.Spider):
                 this_party[field_name]= value
 
                 if field_name == 'tse:sigla':
-                    this_party['slp:resource_uri']= self.db_parties[value]
+                    this_party['slnp:resource_uri']= self.db_parties[value]
 
             if (col == ncols-1):
                 this_party['org:role']= self.db_roles['Presidente']

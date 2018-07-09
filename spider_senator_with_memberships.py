@@ -243,5 +243,5 @@ def senator_api_v1_uri(person_registration_id):
     return uri
 
 def _getagents():
-    df = pd.read_csv('datasets/slp/agents.csv', encoding='utf-8', sep= ';', index_col=0)    
+    df = pd.read_csv('datasets/slnp/agents.csv', encoding='utf-8', sep= ';', index_col=0)    
     return df.to_dict()

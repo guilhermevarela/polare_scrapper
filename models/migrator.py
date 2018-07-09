@@ -20,14 +20,15 @@ import glob
 import pandas as pd
 import json
 import sys
+import errno
 sys.path.append('..')
 sys.path.append('scripts')
 
-import errno
+from numpy import nan
 
 from uri_generators import person_uri, formaleducation_uri
 from uuid import uuid4
-
+BASE_URI = 'http://www.seliganapolitica.org/resource/'
 
 class Migrator(object):
     '''
@@ -39,7 +40,7 @@ class Migrator(object):
         self._initialize_agents()
         self._initialize_formaleducation()
         self._initialize_parties()
-        # import code; code.interact(local=dict(globals(), **locals()))
+        
 
     def migrate(self, input_file):
         '''
@@ -52,6 +53,7 @@ class Migrator(object):
                     * Membership
                     * Post
 
+            To do:
                 * Add instances ttl lines for resources:
                     * Membership
                     * Post
@@ -69,14 +71,19 @@ class Migrator(object):
                 txt = f.read()
             f.close()
 
-            for _, old_newidx in self.agents.items():
+            # REPLACE URI's
+            for _, old_newidx in self.agents_dict.items():
                 txt = txt.replace(*old_newidx)
 
-            for _, old_newidx in self.formaleducation.items():
+            for _, old_newidx in self.educ_dict.items():
                 txt = txt.replace(*old_newidx)
 
             for _, old_newidx in self.parties_dict.items():
-                txt = txt.replace(*old_newidx)
+                olduri, newuri = old_newidx
+                newuri = '{:}{:}'.format(BASE_URI, newuri)
+                txt = txt.replace(olduri, newuri)
+
+            # REMOVE URI's
 
             if not os.path.exists(os.path.dirname(output_dir)):
                 try:
@@ -134,10 +141,10 @@ class Migrator(object):
             json.dump(dict2dict_list(agents_dict), f)
         f.close()
 
-        self.agents = agents_dict
+        self.agents_dict = agents_dict
 
     def _initialize_agents_fromtable(self):
-        _df = pd.read_csv('datasets/slp/agents.csv', sep=';', encoding='utf-8', index_col=0)
+        _df = pd.read_csv('datasets/slnp/agents.csv', sep=';', encoding='utf-8', index_col=0)
         print(_df.columns)
         _df = _df[['cam:nomeCivil', 'cam:dataNascimento']]
 
@@ -164,7 +171,7 @@ class Migrator(object):
                                         value[1]  .:  str uuid4() for resource
 
             usage:
-                self.formaleducation = self._initialize_formaleducation()
+                self.educ_dict = self._initialize_formaleducation()
                 {'Superior': ['2f615aa52f420810e559590a4cfbfafd', '01e502af-2208-4184-87db-c7162e14e60e']}
         '''
         formaleducation_path = 'datasets/migrations/mappings/formaleducation.json'
@@ -195,15 +202,15 @@ class Migrator(object):
             json.dump(educ_dict, f)
         f.close()
 
+        self.educ_dict = educ_dict
 
-        self.formaleducation = educ_dict
 
     def _initialize_parties(self):
         '''[summary]
 
         Computes a new party attribute list
         '''
-        # organizations_path = 'datasets/slp/organizations.csv'
+        # organizations_path = 'datasets/slnp/organizations.csv'
         # df = pd.read_csv(organizations_path, sep=';', index_col=0)
 
 
@@ -248,7 +255,7 @@ def make_party_mapping_dict():
         keys will be `sigla` field
         values list of values
     '''
-    organizations_path = 'datasets/slp/organizations.csv'
+    organizations_path = 'datasets/slnp/organizations.csv'
     df = pd.read_csv(organizations_path, sep=';', index_col=0)
 
     parties_path = 'datasets/camara/v2/partidos.json'
@@ -264,8 +271,19 @@ def make_party_mapping_dict():
             party_mapping_dict[dict_['sigla']] = (dict_['uri'], rec_.index[0])
     return party_mapping_dict
 
+def make_post_camara_mapping_dict():
+    pass
 
+
+
+
+def make_post_camara_mapping_dict():
+    pass
+
+def make_post_membership_party_mapping_dict():
+    pass
 
 
 if __name__ == '__main__':
-    Migrator().migrate('datasets/migrations/rdf/deputados-info-legislatura-55.txt')
+    # Migrator().migrate('datasets/migrations/rdf/deputados-info-legislatura-55.txt')
+    make_post_membership_mapping_dict()

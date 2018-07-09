@@ -148,7 +148,7 @@ class CongressmanWithMembershipsSpider(scrapy.Spider):
         # resource_uri = response.meta['resource_uri']
         outputs = {}
         for deputados in root:            
-            # outputs = {'slp:resource_uri': resource_uri}
+            # outputs = {'slnp:resource_uri': resource_uri}
             outputs = {}
             for attr in deputados:
                 if attr.tag in self.congressman_mapping:
@@ -169,7 +169,7 @@ class CongressmanWithMembershipsSpider(scrapy.Spider):
             terms = []
             for term in deputados.find('./periodosExercicio'):
                 result = {
-                    'slp:resource_uri': str(uuid4()),
+                    'slnp:resource_uri': str(uuid4()),
                     'org:role': self.roles['Deputy']
                 }
                 for attr in term:
@@ -189,7 +189,7 @@ class CongressmanWithMembershipsSpider(scrapy.Spider):
             affiliations = []
             for affiliation in deputados.find('./filiacoesPartidarias'):
                 result = {
-                    'slp:resource_uri': str(uuid4()),
+                    'slnp:resource_uri': str(uuid4()),
                     'org:role': self.roles['Affiliate']
                 }
                 for attr in affiliation:
@@ -207,7 +207,7 @@ class CongressmanWithMembershipsSpider(scrapy.Spider):
                     affiliations[-1]['cam:finishDate'] = result['cam:dataFiliacaoPartidoPosterior']
                 else:
                     affiliation_0 = {
-                        'slp:resource_uri': str(uuid4()),
+                        'slnp:resource_uri': str(uuid4()),
                         'cam:sigla': result['cam:siglaPartidoAnterior'],
                         'cam:startDate': None,
                         'cam:finishDate': result['cam:dataFiliacaoPartidoPosterior'],
@@ -216,7 +216,7 @@ class CongressmanWithMembershipsSpider(scrapy.Spider):
                     affiliations.append(affiliation_0)
 
                 affiliation_0 = {
-                    'slp:resource_uri': str(uuid4()),
+                    'slnp:resource_uri': str(uuid4()),
                     'cam:sigla': result['cam:siglaPartidoPosterior'],
                     'cam:startDate': result['cam:dataFiliacaoPartidoPosterior'],
                     'cam:finishDate': None,
@@ -229,7 +229,7 @@ class CongressmanWithMembershipsSpider(scrapy.Spider):
             else:
                 id_partido = deputados.find('./partidoAtual/idPartido')
                 outputs['affiliations'] = [{
-                    'slp:resource_uri': str(uuid4()),
+                    'slnp:resource_uri': str(uuid4()),
                     'cam:sigla': id_partido.text,
                     'cam:startDate': None,
                     'cam:finishDate': None,

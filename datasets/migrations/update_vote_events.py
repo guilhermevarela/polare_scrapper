@@ -29,7 +29,7 @@ def get_deputies(deprecated=False):
         return idx2url
     else:
         df = pd.read_csv('../slp/agents.csv', sep=';', header=0,
-                         index_col='slp:resource_uri', encoding='utf-8')
+                         index_col='slnp:resource_uri', encoding='utf-8')
         df = df[df['cam:ideCadastro'].notnull()]
 
         uri2idx = df['cam:ideCadastro'].to_dict()

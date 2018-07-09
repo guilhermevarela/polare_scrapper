@@ -106,7 +106,7 @@ def make_agents_json(agents_dict, filename='agents'):
 
 
 if __name__ == '__main__':    
-    source_path = 'datasets/slp/agents.csv'
+    source_path = 'datasets/slnp/agents.csv'
     df = pd.read_csv(source_path, sep=';', index_col=0).fillna('N/A')
     agents_dict = df.to_dict('index')
 

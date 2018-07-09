@@ -40,7 +40,7 @@ def get_agents():
                 key: ideCadastro api v1 camara
                 value: resource uri
     '''
-    resources_path = 'datasets/slp/agents.csv'
+    resources_path = 'datasets/slnp/agents.csv'
     df = pd.read_csv(
         resources_path, sep=';', index_col=0, header=0, encoding='utf-8'
     )
@@ -56,7 +56,7 @@ def get_party():
                 value: resource uri
     '''
     result = get_resource(
-        'slp/organizations/parties-tse.csv', 'sigla', 'slp:resource_uri'
+        'slp/organizations/parties-tse.csv', 'sigla', 'slnp:resource_uri'
     )
 
     return result
