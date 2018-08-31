@@ -1,7 +1,11 @@
 '''This scripts converts legacy uris into current ones
+    
+    Date: May 31, 2018
+
+    Author: Guilherme Varela
 
 Some uris are converted from md5 format to uuid4
-
+    
 Converts:
 
     * Agents
@@ -9,7 +13,7 @@ Converts:
     * Organization (Parties)
 
 Removes instances from:
-    
+
     * Membership
     * Post
 
@@ -29,6 +33,9 @@ from numpy import nan
 from uri_generators import person_uri, formaleducation_uri
 from uuid import uuid4
 BASE_URI = 'http://www.seliganapolitica.org/resource/'
+
+source_dir = ''
+target_dir = ''
 
 class Migrator(object):
     '''

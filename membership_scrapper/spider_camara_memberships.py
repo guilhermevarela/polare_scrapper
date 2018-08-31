@@ -22,19 +22,25 @@
     updates:
         2018-03-08 updated to use XPaths
         2018-04-04 updated to query current list of congress on API V2.
+        2018-08-30 making it into a standing alone script.
 '''
-import scrapy
-import re
+import datetime
+import json
 import xml.etree.ElementTree as ET
 
+import scrapy
+import networkx as nx
+# import re
+
+
 # import pandas as pd
-import json
+
 import aux
 
 # Unique id without Network address
 from uuid import uuid4
 
-POLARE_PREFIX ='http://www.seliganapolitica.org/resource/'
+POLARE_PREFIX = 'http://www.seliganapolitica.org/resource/'
 
 URL_OPEN_DATA_CAMARA_API_V1 = 'http://www.camara.leg.br/SitCamaraWS/Deputados.asmx/'
 URL_OPEN_DATA_CAMARA_API_V2 = 'https://dadosabertos.camara.leg.br/api/v2/deputados'
@@ -43,8 +49,9 @@ URL_OPEN_DATA_CAMARA_API_V2 = 'https://dadosabertos.camara.leg.br/api/v2/deputad
 IGNORE_TAGS_TERMS = set(['idCadastroParlamentarAnterior'])
 IGNORE_TAGS_AFFILIATIONS = set([])
 
-class CongressmanWithMembershipsSpider(scrapy.Spider):
-    name = 'congressman_with_memberships'
+
+class CamaraMembershipSpider(scrapy.Spider):
+    name = 'camara_memberships'
 
 
     # Overwrites default: ASCII
@@ -66,17 +73,38 @@ class CongressmanWithMembershipsSpider(scrapy.Spider):
         'ideCadastro', 'nomeCivil', 'nomeParlamentarAtual',
         'dataNascimento', 'dataFalecimento'])
 
-    def __init__(self, legislatura=55, *args, **kwargs):
+    def __init__(self, *args, **kwargs):
         super(scrapy.Spider).__init__(*args, **kwargs)
-        # self.old_congressmen = aux.get_congressmen(deprecated=True)
-        # print(legislatura)
-        self.agents_dict = aux.get_agents()
-        self.parties = aux.get_party()
+        # Parses person json
+        self.agents_dict = get_agents()
+	# yml or json?
+        self.parties = get_party()
 
         # Roles dictionary
-        self.roles = aux.get_role()
+        self.roles = get_role()
         self.legislatura = legislatura
         self.prefix = 'cam'
+
+	# Process legislatura -- turn into a data interval
+	if 'legislatura' in kwargs:
+		legislatura = int(kwargs['legislatura'])
+		# 55 --> 2015-02-01, 54 --> 2011-02-01, 53 --> 2007-02-01
+		# legislatura beginings
+		start_date = datetime.date(2015 * (1 + (legislatura - 55)), 2, 1)  
+		self.start_date = start_date
+	elif 'start_date' in kwargs:
+		self.start_date = kwargs['start_date'] 
+	else:
+		raise ValueError('Either `legislatura` or `start_date` must be provided') 
+	
+	if 'finish_date' in kwargs:
+		self.finish_date = kwargs['finish_date'] 
+	else:
+		self.finish_date = self.start_date + datetime.timedelta(days=1) 
+ 
+		
+	
+		
 
     def start_requests(self):
         '''
@@ -244,8 +272,28 @@ class CongressmanWithMembershipsSpider(scrapy.Spider):
             'cam:nomeCivil': 'sen:NomeCompletoParlamentar'
         }
         for col_congress, col_agents in mapping_dict.items():
-            lookup_dict = self.agents_dict[col_agents]
+            # lookup_dict = self.agents_dict[col_agents]
             for resource_uri_, resource_id_ in lookup_dict.items():
                 if outputs[col_congress] == str(resource_id_):
                     return resource_uri_
         return None
+
+
+def get_agents(identities_path='identities.json'):
+    with open(identities_path, mode='r') as f:
+        agents_json = json.load(f)
+
+    if agents_json['info']['type'] != 'PersonIdentity':
+        ValueError('identitiesJSON must be of info#type = `PersonIdentity`')
+
+    agents_graph = nx.Graph()
+    for ag in agents_json['']:
+        pass
+
+    return agents_graph
+
+def get_roles():
+    pass
+
+def get_parties():
+    pass
