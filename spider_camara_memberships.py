@@ -33,8 +33,7 @@ import networkx as nx
 # import re
 
 
-# import pandas as pd
-
+import pandas as pd
 import aux
 
 # Unique id without Network address
@@ -77,7 +76,7 @@ class CamaraMembershipSpider(scrapy.Spider):
         super(scrapy.Spider).__init__(*args, **kwargs)
         # Parses person json
         self.agents_dict = get_agents()
-	# yml or json?
+	    # yml or json?
         self.parties = get_party()
 
         # Roles dictionary
@@ -85,33 +84,34 @@ class CamaraMembershipSpider(scrapy.Spider):
         self.legislatura = legislatura
         self.prefix = 'cam'
 
-	# Process legislatura -- turn into a data interval
-	if 'legislatura' in kwargs:
-		legislatura = int(kwargs['legislatura'])
-		# 55 --> 2015-02-01, 54 --> 2011-02-01, 53 --> 2007-02-01
-		# legislatura beginings
-		start_date = datetime.date(2015 * (1 + (legislatura - 55)), 2, 1)  
-		self.start_date = start_date
-	elif 'start_date' in kwargs:
-		self.start_date = kwargs['start_date'] 
-	else:
-		raise ValueError('Either `legislatura` or `start_date` must be provided') 
-	
-	if 'finish_date' in kwargs:
-		self.finish_date = kwargs['finish_date'] 
-	else:
-		self.finish_date = self.start_date + datetime.timedelta(days=1) 
- 
-		
-	
-		
+        # Process legislatura -- turn into a data interval
+        if 'legislatura' in kwargs:
+            legislatura = int(kwargs['legislatura'])
+        	# 55 --> 2015-02-01, 54 --> 2011-02-01, 53 --> 2007-02-01
+        	# legislatura beginings
+            start_date = busday_orafter(start_date)
+            self.start_date = start_date
+        elif 'start_date' in kwargs:
+            self.start_date = kwargs['start_date']
+        else:
+            raise ValueError('Either `legislatura` or `start_date` must be provided') 
+
+        if 'finish_date' in kwargs:
+            self.finish_date = kwargs['finish_date']
+        else:
+            self.finish_date = self.start_date + datetime.timedelta(days=1)
 
     def start_requests(self):
         '''
             Stage 1: Request Get each congressmen for current term
         '''
+        start_str = self.start_date.strftime('%Y %m %d')
+        finish_str = self.finish_date.strftime('%Y %m %d')
+
         url = URL_OPEN_DATA_CAMARA_API_V2
         url = '{:}?idLegislatura={:}'.format(url, self.legislatura)
+        url = '{:}&dataInicio={:}'.format(url, start_str)
+        url = '{:}&dataFim={:}'.format(url, finish_str)
         url = '{:}&ordenarPor=nome'.format(url)
         req = scrapy.Request(
             url,
@@ -174,7 +174,7 @@ class CamaraMembershipSpider(scrapy.Spider):
 
         # resource_uri = response.meta['resource_uri']
         outputs = {}
-        for deputados in root:            
+        for deputados in root:
             # outputs = {'slnp:resource_uri': resource_uri}
             outputs = {}
             for attr in deputados:
@@ -286,14 +286,64 @@ def get_agents(identities_path='identities.json'):
     if agents_json['info']['type'] != 'PersonIdentity':
         ValueError('identitiesJSON must be of info#type = `PersonIdentity`')
 
-    agents_graph = nx.Graph()
-    for ag in agents_json['']:
-        pass
+    agents_list = agents_json['data']['person']
+    properties_list = agents_json['data']['property']
 
+    agents_graph = nx.DiGraph()
+    for a in agents_list:
+        source_list = []
+        target_list = []
+        for p in properties_list:
+            pid = p['property_id']
+            pvl = p['value']
+            pst = '{:}:{:}'.format(pid, pvl)
+
+            if pid == 'seliga_uri':
+                source_list.append(pst)
+            else:
+                target_list.append(pst)
+
+        agents_graph.add_edges_from([
+            (src, tgt)
+            for src in source_list
+            for tgt in target_list
+        ])
     return agents_graph
 
+
 def get_roles():
-    pass
+    roles_path = 'datasets/snlp/roles.csv'
+    df = pd.read_csv(roles_path, sep=';', index_col=0)
+    roles_dict = df.to_dict()
+    for label, d in roles_dict.items():
+        roles_dict[label] = {v: k for k, v in d}
+    return roles_dict
+
 
 def get_parties():
-    pass
+    parties_path = 'datasets/snlp/parties.csv'
+    df = pd.read_csv(parties_path, sep=';', index_col=0)
+    parties_dict = df.to_dict()
+    for label, d in parties_dict.items():
+        parties_dict[label] = {v: k for k, v in d}
+    return parties_dict
+
+
+def busday_orafter(start_date):
+    '''Returns closest business date from start date
+
+    Arguments:
+        start_date {datetime.date} -- inital date
+
+    Returns:
+        busdate {datetime.date} -- busdate
+    '''
+    finish_date = start_date + time.delta(21)
+    for busdate in daterange(start_date, finish_date):
+        return busdate
+    return None
+
+def busdays_range(start_date, end_date):
+    from dateutil.rrule import DAILY, rrule, MO, TU, WE, TH, FR
+
+    return rrule(DAILY, dtstart=start_date, until=end_date, byweekday=(MO,TU,WE,TH,FR))

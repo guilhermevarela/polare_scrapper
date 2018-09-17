@@ -1,0 +1,10 @@
+{
+
+    "python_interpreter": "~/Venv/slnp/bin/python",
+
+    "anaconda_linting_behaviour": "load-save",
+
+    "anaconda_linter_phantoms": true,
+
+    "mypy": true,
+}
