@@ -11,8 +11,7 @@
     2. For each congressmen get details
     3. Within details gets current membership and membershipHistory
 
-    
-    Scrapy shell: 
+    Scrapy shell:
         1. scrapy shell 'http://www.camara.leg.br/SitCamaraWS/Deputados.asmx/ObterDeputados'
 
     Scrapy running: scrapy runspider spider_congressman_with_memberships.py
@@ -26,7 +25,7 @@
 '''
 import scrapy
 import re
-import xml.etree.ElementTree as ET 
+import xml.etree.ElementTree as ET
 
 # import pandas as pd
 import json
