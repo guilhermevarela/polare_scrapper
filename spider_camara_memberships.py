@@ -50,7 +50,7 @@ IGNORE_TAGS_AFFILIATIONS = set([])
 
 
 class CamaraMembershipSpider(scrapy.Spider):
-    name = 'camara_memberships'
+    name = 'camaramemberships'
 
 
     # Overwrites default: ASCII
@@ -73,46 +73,58 @@ class CamaraMembershipSpider(scrapy.Spider):
         'dataNascimento', 'dataFalecimento'])
 
     def __init__(self, *args, **kwargs):
+        # Handle input arguments        
+        legislatura = kwargs.pop('legislatura', None)
+        start_date = kwargs.pop('start_date', None)
+        finish_date = kwargs.pop('finish_date', None)
+
         super(scrapy.Spider).__init__(*args, **kwargs)
         # Parses person json
         self.agents_dict = get_agents()
 	    # yml or json?
-        self.parties = get_party()
+        self.parties = get_parties()
 
         # Roles dictionary
-        self.roles = get_role()
-        self.legislatura = legislatura
+        self.roles = get_roles()
         self.prefix = 'cam'
 
         # Process legislatura -- turn into a data interval
-        if 'legislatura' in kwargs:
-            legislatura = int(kwargs['legislatura'])
+        if legislatura:
+            legislatura = int(legislatura)
         	# 55 --> 2015-02-01, 54 --> 2011-02-01, 53 --> 2007-02-01
         	# legislatura beginings
-            start_date = busday_orafter(start_date)
+            start_date = get_start_from(legislatura)
             self.start_date = start_date
-        elif 'start_date' in kwargs:
-            self.start_date = kwargs['start_date']
+            self.legislatura = legislatura
+        elif start_date:
+            start_date = datetime.strptime(start_date, '%Y-%m-%d')
+            self.start_date = busday_adjust(start_date)
         else:
-            raise ValueError('Either `legislatura` or `start_date` must be provided') 
+            err = 'Either `legislatura` or `start_date` must be provided'
+            raise ValueError(err)
 
-        if 'finish_date' in kwargs:
-            self.finish_date = kwargs['finish_date']
+        if finish_date:
+            finish_date = datetime.strptime(finish_date, '%Y-%m-%d')
+            # self.finish_date = busday_adjust(finish_date)
+            self.finish_date = finish_date
         else:
-            self.finish_date = self.start_date + datetime.timedelta(days=1)
+            finish_date = self.start_date + datetime.timedelta(days=1)
+            # self.finish_date = busday_adjust(finish_date)
+            self.finish_date = finish_date
 
     def start_requests(self):
         '''
             Stage 1: Request Get each congressmen for current term
         '''
-        start_str = self.start_date.strftime('%Y %m %d')
-        finish_str = self.finish_date.strftime('%Y %m %d')
+        start_str = self.start_date.strftime('%Y-%m-%d')
+        finish_str = self.finish_date.strftime('%Y-%m-%d')
 
         url = URL_OPEN_DATA_CAMARA_API_V2
         url = '{:}?idLegislatura={:}'.format(url, self.legislatura)
         url = '{:}&dataInicio={:}'.format(url, start_str)
         url = '{:}&dataFim={:}'.format(url, finish_str)
         url = '{:}&ordenarPor=nome'.format(url)
+
         req = scrapy.Request(
             url,
             self.request_congressman,
@@ -189,6 +201,7 @@ class CamaraMembershipSpider(scrapy.Spider):
                     else:
                         outputs[key] = None
 
+            import code; code.interact(local=dict(globals(), **locals()))
             outputs['resource_uri'] = self.search_agents_uri(outputs)
             if not outputs['resource_uri']:
                 outputs['resource_uri'] = str(uuid4())
@@ -293,43 +306,62 @@ def get_agents(identities_path='identities.json'):
     for a in agents_list:
         source_list = []
         target_list = []
+        id_list = a['identity']
         for p in properties_list:
-            pid = p['property_id']
-            pvl = p['value']
-            pst = '{:}:{:}'.format(pid, pvl)
+            pid = p['_id']
+            p_list = [id_dict
+                      for id_dict in id_list
+                      if id_dict['property_id'] == p['_id']]
 
-            if pid == 'seliga_uri':
-                source_list.append(pst)
-            else:
-                target_list.append(pst)
+            if bool(p_list):
+                p_dict = p_list[0]
+                pvl = p_dict['value']
+                pst = '{:}:{:}'.format(pid, pvl)
 
-        agents_graph.add_edges_from([
-            (src, tgt)
-            for src in source_list
-            for tgt in target_list
-        ])
+                if pid == 'seliga_uri':
+                    source_list.append(pst)
+                else:
+                    target_list.append(pst)
+
+        if bool(source_list):
+            agents_graph.add_edges_from([
+                (src, tgt)
+                for src in source_list
+                for tgt in target_list
+            ])
     return agents_graph
 
 
 def get_roles():
-    roles_path = 'datasets/snlp/roles.csv'
+    roles_path = 'datasets/slnp/roles.csv'
     df = pd.read_csv(roles_path, sep=';', index_col=0)
     roles_dict = df.to_dict()
     for label, d in roles_dict.items():
-        roles_dict[label] = {v: k for k, v in d}
+        roles_dict[label] = {v: k for k, v in d.items()}
     return roles_dict
 
 
 def get_parties():
-    parties_path = 'datasets/snlp/parties.csv'
+    parties_path = 'datasets/slnp/organizations.csv'
     df = pd.read_csv(parties_path, sep=';', index_col=0)
     parties_dict = df.to_dict()
     for label, d in parties_dict.items():
-        parties_dict[label] = {v: k for k, v in d}
+        parties_dict[label] = {v: k for k, v in d.items()}
     return parties_dict
 
 
-def busday_orafter(start_date):
+def get_start_from(legislatura):
+    '''Gets the first date from legislatura
+
+    Arguments:
+        legislatura {int} -- [description]
+    '''
+    year = (legislatura - 55) * 4 + 2015
+    # return busday_adjust(datetime.date(year, 2, 1))
+    return datetime.date(year, 2, 1)
+
+
+def busday_adjust(start_date):
     '''Returns closest business date from start date
 
     Arguments:
@@ -338,8 +370,8 @@ def busday_orafter(start_date):
     Returns:
         busdate {datetime.date} -- busdate
     '''
-    finish_date = start_date + time.delta(21)
-    for busdate in daterange(start_date, finish_date):
+    finish_date = start_date + datetime.timedelta(21)
+    for busdate in busdays_range(start_date, finish_date):
         return busdate
     return None
 
