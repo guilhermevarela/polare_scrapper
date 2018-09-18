@@ -39,7 +39,7 @@ import aux
 # Unique id without Network address
 from uuid import uuid4
 
-POLARE_PREFIX = 'http://www.seliganapolitica.org/resource/'
+SLNP_PREFIX = 'http://www.seliganapolitica.org/resource/'
 
 URL_OPEN_DATA_CAMARA_API_V1 = 'http://www.camara.leg.br/SitCamaraWS/Deputados.asmx/'
 URL_OPEN_DATA_CAMARA_API_V2 = 'https://dadosabertos.camara.leg.br/api/v2/deputados'
@@ -80,12 +80,12 @@ class CamaraMembershipSpider(scrapy.Spider):
 
         super(scrapy.Spider).__init__(*args, **kwargs)
         # Parses person json
-        self.agents_dict = get_agents()
+        self.agents_graph = get_agents()
 	    # yml or json?
         self.parties = get_parties()
 
         # Roles dictionary
-        self.roles = get_roles()
+        self.roles = get_roles()['rdfs:label']
         self.prefix = 'cam'
 
         # Process legislatura -- turn into a data interval
@@ -147,15 +147,7 @@ class CamaraMembershipSpider(scrapy.Spider):
             url = '{:}ObterDetalhesDeputado?ideCadastro='.format(url)
             url = '{:}{:}'.format(url, resource_idx)
             url = '{:}&numLegislatura={:}'.format(url, self.legislatura)
-            # resource_uri = self.agents_dict.get(resource_idx, str(uuid4()))
 
-            # req = scrapy.Request(
-            #     url,
-            #     self.parse_congressman,
-            #     headers={'accept': 'application/json'},
-            #     meta={'resource_uri': resource_uri,
-            #           'resource_idx': resource_idx}
-            # )
             req = scrapy.Request(
                 url,
                 self.parse_congressman,
@@ -201,10 +193,10 @@ class CamaraMembershipSpider(scrapy.Spider):
                     else:
                         outputs[key] = None
 
-            import code; code.interact(local=dict(globals(), **locals()))
+
             outputs['resource_uri'] = self.search_agents_uri(outputs)
             if not outputs['resource_uri']:
-                outputs['resource_uri'] = str(uuid4())
+                outputs['resource_uri'] = '{:}{:}'.format(SLNP_PREFIX, str(uuid4()))
 
             terms = []
             for term in deputados.find('./periodosExercicio'):
@@ -279,20 +271,38 @@ class CamaraMembershipSpider(scrapy.Spider):
         yield outputs
 
     def search_agents_uri(self, outputs):
+        '''Search agents uri in a property digraph
+
+        Ref .: https://networkx.github.io/documentation/latest/release/migration_guide_from_1.x_to_2.0.html
+
+        Arguments:
+            outputs {[type]} -- [description]
+
+        Returns:
+            [type] -- [description]
+        '''
         mapping_dict = {
             'cam:ideCadastro': 'cam:ideCadastro',
             'cam:nomeCivil': 'cam:nomeCivil',
             'cam:nomeCivil': 'sen:NomeCompletoParlamentar'
         }
         for col_congress, col_agents in mapping_dict.items():
-            # lookup_dict = self.agents_dict[col_agents]
-            for resource_uri_, resource_id_ in lookup_dict.items():
-                if outputs[col_congress] == str(resource_id_):
-                    return resource_uri_
+
+            lbl = col_congress.split(':')[-1]
+            val = outputs[col_congress]
+            nid = '{:s}:{:s}'.format(lbl, val)
+            try:
+                vid = self.agents_graph.predecessors(nid)
+            except nx.exception.NetworkXError:
+                vid = None
+
+            if vid:
+                return vid
         return None
 
 
 def get_agents(identities_path='identities.json'):
+
     with open(identities_path, mode='r') as f:
         agents_json = json.load(f)
 
@@ -300,15 +310,24 @@ def get_agents(identities_path='identities.json'):
         ValueError('identitiesJSON must be of info#type = `PersonIdentity`')
 
     agents_list = agents_json['data']['person']
+
     properties_list = agents_json['data']['property']
 
     agents_graph = nx.DiGraph()
+
     for a in agents_list:
-        source_list = []
-        target_list = []
+
         id_list = a['identity']
+
+        source_list = [dict_['value']
+                       for dict_ in id_list
+                       if dict_['property_id'] == 'seliga_uri']
+
+        target_list = []
+
         for p in properties_list:
             pid = p['_id']
+
             p_list = [id_dict
                       for id_dict in id_list
                       if id_dict['property_id'] == p['_id']]
@@ -316,37 +335,46 @@ def get_agents(identities_path='identities.json'):
             if bool(p_list):
                 p_dict = p_list[0]
                 pvl = p_dict['value']
-                pst = '{:}:{:}'.format(pid, pvl)
+                pvl = '{0:.0f}'.format(pvl) if isinstance(pvl, float) else pvl
+                pst = '{:s}:{:s}'.format(pid, pvl)
 
-                if pid == 'seliga_uri':
-                    source_list.append(pst)
-                else:
-                    target_list.append(pst)
+                target_list.append(pst)
 
         if bool(source_list):
+
             agents_graph.add_edges_from([
                 (src, tgt)
                 for src in source_list
                 for tgt in target_list
             ])
+
     return agents_graph
 
 
 def get_roles():
+
     roles_path = 'datasets/slnp/roles.csv'
+
     df = pd.read_csv(roles_path, sep=';', index_col=0)
+
     roles_dict = df.to_dict()
+
     for label, d in roles_dict.items():
         roles_dict[label] = {v: k for k, v in d.items()}
+
     return roles_dict
 
 
 def get_parties():
     parties_path = 'datasets/slnp/organizations.csv'
+
     df = pd.read_csv(parties_path, sep=';', index_col=0)
+
     parties_dict = df.to_dict()
+
     for label, d in parties_dict.items():
         parties_dict[label] = {v: k for k, v in d.items()}
+
     return parties_dict
 
 
@@ -357,7 +385,7 @@ def get_start_from(legislatura):
         legislatura {int} -- [description]
     '''
     year = (legislatura - 55) * 4 + 2015
-    # return busday_adjust(datetime.date(year, 2, 1))
+
     return datetime.date(year, 2, 1)
 
 
@@ -370,12 +398,16 @@ def busday_adjust(start_date):
     Returns:
         busdate {datetime.date} -- busdate
     '''
+
     finish_date = start_date + datetime.timedelta(21)
+
     for busdate in busdays_range(start_date, finish_date):
         return busdate
     return None
 
+
 def busdays_range(start_date, end_date):
+
     from dateutil.rrule import DAILY, rrule, MO, TU, WE, TH, FR
 
     return rrule(DAILY, dtstart=start_date, until=end_date, byweekday=(MO,TU,WE,TH,FR))
